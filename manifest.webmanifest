@@ -1,1 +1,9 @@
-{"name": "家務管家", "short_name": "家務管家", "start_url": "./", "display": "standalone", "background_color": "#f4f4f6", "theme_color": "#f7f7f7", "lang": "zh-Hant"}
+{
+  "name": "家務管家",
+  "short_name": "家務管家",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3f5f7",
+  "theme_color": "#f6f7f9",
+  "lang": "zh-Hant"
+}
