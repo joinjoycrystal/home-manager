@@ -60,7 +60,7 @@ button{
 .btn.danger{background:#fff0ef;color:var(--danger)}
 nav{
   position:fixed;left:0;right:0;bottom:0;z-index:30;
-  display:grid;grid-template-columns:repeat(5,1fr);
+  display:grid;grid-template-columns:repeat(6,1fr);
   background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
   border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom)
@@ -127,8 +127,21 @@ textarea{min-height:84px;resize:vertical}
 </section>
 
 <section id="items">
-  <div class="section-head"><h2>物品資料</h2><button class="btn primary" onclick="openForm('item')">＋ 新增</button></div>
+  <div class="section-head"><h2>物品資料</h2><button class="btn primary" onclick="openForm('item')">＋ 新增物品</button></div>
   <div class="panel" id="itemList"></div>
+
+  <div class="section-head" style="margin-top:24px">
+    <div>
+      <h2>洗衣精／柔軟精用量參考</h2>
+      <div class="subtitle">自動投入設定基準，以水量 30L 為主</div>
+    </div>
+    <button class="btn primary" onclick="openForm('laundryRef')">＋ 新增</button>
+  </div>
+  <div class="panel" id="laundryRefList"></div>
+</section>
+<section id="pets">
+  <div class="section-head"><h2>寵物</h2><button class="btn primary" onclick="openForm('pet')">＋ 新增</button></div>
+  <div class="panel" id="petList"></div>
 </section>
 </main>
 
@@ -138,6 +151,7 @@ textarea{min-height:84px;resize:vertical}
   <button data-tab="supplies">耗材</button>
   <button data-tab="shopping">採購</button>
   <button data-tab="items">物品</button>
+  <button data-tab="pets">寵物</button>
 </nav>
 
 <dialog id="editor">
@@ -150,8 +164,8 @@ textarea{min-height:84px;resize:vertical}
 </dialog>
 
 <script>
-const KEY='homeManagerDataV05';
-const OLD_KEYS=['homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
+const KEY='homeManagerDataV07';
+const OLD_KEYS=['homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
 const today=()=>new Date().toISOString().slice(0,10);
 const addDays=(date,days)=>{
   const d=new Date(date+'T12:00:00');
@@ -161,6 +175,9 @@ const addDays=(date,days)=>{
 const id=()=>crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()+Math.random();
 
 let data=loadData();
+
+if(!data.pets) data.pets=[];
+if(!data.laundryRefs) data.laundryRefs=[];
 
 function seedAirPurifiers(){
   const presets=[
@@ -193,6 +210,30 @@ function seedROFilters(){
   localStorage.setItem(KEY,JSON.stringify(data));
 }
 seedROFilters();
+
+function seedLaundryRefs(){
+  const refs=[
+    {name:'Attack ZERO',brand:'花王',kind:'洗衣精',water:30,ml:10,source:'官方資料'},
+    {name:'Attack ZERO 自動投入專用',brand:'花王',kind:'洗衣精',water:30,ml:6,source:'官方資料'},
+    {name:'NANOX one',brand:'LION',kind:'洗衣精',water:30,ml:10,source:'官方資料'},
+    {name:'Attack 消臭Strong Gel',brand:'花王',kind:'洗衣精',water:30,ml:30,source:'官方資料'},
+    {name:'Attack 除菌Advance',brand:'花王',kind:'洗衣精',water:30,ml:30,source:'官方資料'},
+    {name:'Humming 消臭實感 自動投入專用',brand:'花王',kind:'柔軟精',water:30,ml:5,source:'官方資料'},
+    {name:'Humming 消臭實感',brand:'花王',kind:'柔軟精',water:30,ml:10,source:'官方資料'},
+    {name:'Humming 素肌おもい',brand:'花王',kind:'柔軟精',water:30,ml:10,source:'官方資料'},
+    {name:'Humming 非濃縮',brand:'花王',kind:'柔軟精',water:30,ml:20,source:'官方資料'},
+    {name:'Ariel',brand:'P&G',kind:'洗衣精',water:30,ml:24,source:'你提供的照片'},
+    {name:'奈米樂 白瓶',brand:'',kind:'洗衣精',water:30,ml:10,source:'你提供的照片'},
+    {name:'Lenor 1week',brand:'P&G',kind:'柔軟精',water:30,ml:15,source:'你提供的照片'}
+  ];
+  for(const r of refs){
+    if(!data.laundryRefs.some(x=>x.name===r.name)){
+      data.laundryRefs.push({id:id(),...r});
+    }
+  }
+  localStorage.setItem(KEY,JSON.stringify(data));
+}
+seedLaundryRefs();
 function loadData(){
   let raw=localStorage.getItem(KEY);
   if(raw) return JSON.parse(raw);
@@ -205,14 +246,16 @@ function loadData(){
           chores:o.chores || o.c || [],
           supplies:o.supplies || o.s || [],
           shopping:o.shopping || o.b || [],
-          items:o.items || o.i || []
+          items:o.items || o.i || [],
+          pets:o.pets || [],
+          laundryRefs:o.laundryRefs || []
         };
         localStorage.setItem(KEY,JSON.stringify(migrated));
         return migrated;
       }catch(e){}
     }
   }
-  return {chores:[],supplies:[],shopping:[],items:[]};
+  return {chores:[],supplies:[],shopping:[],items:[],pets:[],laundryRefs:[]};
 }
 function persist(){localStorage.setItem(KEY,JSON.stringify(data));render()}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -244,6 +287,7 @@ function render(){
   const reminderRows=[
     ...data.chores.filter(x=>x.next).map(x=>({type:'家事',name:x.name,date:x.next})),
     ...data.supplies.filter(x=>x.next).map(x=>({type:'耗材',name:x.name,date:x.next})),
+    ...data.pets.filter(x=>x.next).map(x=>({type:'寵物',name:(x.petName+'｜'+x.task),date:x.next})),
   ].sort((a,b)=>a.date.localeCompare(b.date)).slice(0,8);
 
   reminders.innerHTML = (
@@ -299,6 +343,34 @@ function render(){
       </div>
     </div>`
   }).join('') || '<div class="empty">目前沒有物品資料</div>';
+
+  petList.innerHTML=data.pets.map(x=>`
+    <div class="item">
+      <div class="item-title">${esc(x.petName)}｜${esc(x.task)} ${statusBadge(x.next)}</div>
+      <div class="meta">上次完成：${x.last||'-'}<br>週期：${x.cycle||'-'} 天・下次：${x.next||'-'}${x.note?'<br>備註：'+esc(x.note):''}</div>
+      <div class="actions">
+        <button class="btn light" onclick="completeItem('pets','${x.id}')">✓ 已完成</button>
+        <button class="btn soft" onclick="editItem('pet','${x.id}')">編輯</button>
+        <button class="btn danger" onclick="deleteItem('pets','${x.id}')">刪除</button>
+      </div>
+    </div>`).join('') || '<div class="empty">目前沒有寵物照護項目</div>';
+
+  laundryRefList.innerHTML=data.laundryRefs
+    .slice().sort((a,b)=>(a.kind+a.name).localeCompare(b.kind+b.name,'zh-Hant'))
+    .map(x=>`
+      <div class="item">
+        <div class="item-title">${esc(x.name)}
+          <span class="badge ${x.source==='官方資料'?'ok':'soon'}">${esc(x.source||'自訂')}</span>
+        </div>
+        <div class="meta">
+          ${x.brand?esc(x.brand)+'・':''}${esc(x.kind||'')}
+          <br><b style="color:#1c1c1e">水量 ${x.water||30}L → ${x.ml||'-'} ml</b>
+        </div>
+        <div class="actions">
+          <button class="btn soft" onclick="editItem('laundryRef','${x.id}')">編輯</button>
+          <button class="btn danger" onclick="deleteItem('laundryRefs','${x.id}')">刪除</button>
+        </div>
+      </div>`).join('') || '<div class="empty">目前沒有洗衣用量資料</div>';
 }
 
 function completeItem(type,itemId){
@@ -332,7 +404,7 @@ function openForm(type){
 }
 function editItem(type,itemId){
   currentType=type; editingId=itemId;
-  const map={chore:'chores',supply:'supplies',shopping:'shopping',item:'items'};
+  const map={chore:'chores',supply:'supplies',shopping:'shopping',item:'items',pet:'pets',laundryRef:'laundryRefs'};
   const x=data[map[type]].find(v=>v.id===itemId);
   fillForm(type,x||{});
 }
@@ -375,13 +447,36 @@ function fillForm(type,x){
       '</div>'+
       '<div class="notice">洗衣精等用品可直接用這裡比較容量與每次用量。</div>';
   }
+  if(type==='pet'){
+    formTitle.textContent=editingId?'編輯寵物照護':'新增寵物照護';
+    fields.innerHTML=
+      input('寵物名稱','petName','text',x.petName||'')+
+      input('照護項目（例如：驅蟲藥、洗澡、剪指甲）','task','text',x.task||'')+
+      '<div class="form-grid">'+
+      input('上次完成日期','last','date',x.last||today())+
+      input('週期（天）','cycle','number',x.cycle||30)+
+      '</div>'+
+      '<label>備註</label><textarea name="note">'+esc(x.note||'')+'</textarea>';
+  }
+  if(type==='laundryRef'){
+    formTitle.textContent=editingId?'編輯洗衣用量':'新增洗衣用量';
+    fields.innerHTML=
+      input('品名','name','text',x.name||'')+
+      '<div class="form-grid">'+
+      input('品牌','brand','text',x.brand||'')+
+      input('類型（洗衣精／柔軟精）','kind','text',x.kind||'洗衣精')+
+      input('基準水量 L','water','number',x.water||30)+
+      input('使用量 ml','ml','number',x.ml||'')+
+      '</div>'+
+      input('資料來源','source','text',x.source||'自訂');
+  }
   editor.showModal();
 }
 
 function saveForm(){
   const q={};
   fields.querySelectorAll('input,textarea,select').forEach(el=>q[el.name]=el.value);
-  const map={chore:'chores',supply:'supplies',shopping:'shopping',item:'items'};
+  const map={chore:'chores',supply:'supplies',shopping:'shopping',item:'items',pet:'pets',laundryRef:'laundryRefs'};
   const arr=data[map[currentType]];
   let x=editingId ? arr.find(v=>v.id===editingId) : null;
   if(!x){x={id:id()};arr.push(x)}
@@ -398,6 +493,12 @@ function saveForm(){
   }
   if(currentType==='item'){
     x.name=q.name.trim(); x.capacity=Number(q.capacity||0); x.dose=Number(q.dose||0); x.kg=Number(q.kg||0); x.auto=Number(q.auto||0);
+  }
+  if(currentType==='pet'){
+    x.petName=q.petName.trim(); x.task=q.task.trim(); x.last=q.last||today(); x.cycle=Number(q.cycle||30); x.next=addDays(x.last,x.cycle); x.note=q.note||'';
+  }
+  if(currentType==='laundryRef'){
+    x.name=q.name.trim(); x.brand=q.brand.trim(); x.kind=q.kind.trim(); x.water=Number(q.water||30); x.ml=Number(q.ml||0); x.source=q.source.trim()||'自訂';
   }
   editor.close(); persist();
 }

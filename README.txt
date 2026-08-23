@@ -1,17 +1,26 @@
-家務管家 PWA v0.5
+家務管家 PWA v0.7
 
-新增 RO 淨水器五道耗材：
-1. PP 5微米濾芯：90天
-2. 顆粒活性碳／樹脂濾芯：180天
-3. PP 1微米／壓縮碳棒濾芯：180天
-4. RO逆滲透膜：1～2年（顯示最早～最晚建議更換日期）
-5. 後置活性碳濾芯：365天
+新增「洗衣精／柔軟精用量參考」資料庫，放在「物品」頁面。
 
-RO 五道目前「上次更換日期」先留空，避免替使用者猜日期。
-在 App 裡按「編輯」填入實際上次更換日期後，會自動計算下次日期。
-第4道會同時計算 1年與2年的建議更換區間。
+預設資料：
+官方資料
+- Attack ZERO：30L / 10ml
+- Attack ZERO 自動投入專用：30L / 6ml
+- NANOX one：30L / 10ml
+- Attack 消臭Strong Gel：30L / 30ml
+- Attack 除菌Advance：30L / 30ml
+- Humming 消臭實感 自動投入專用：30L / 5ml
+- Humming 消臭實感：30L / 10ml
+- Humming 素肌おもい：30L / 10ml
+- Humming 非濃縮：30L / 20ml
 
-保留 v0.4 空氣清淨機資料，並自動沿用舊版本機資料。
+使用者照片提供
+- Ariel：30L / 24ml
+- 奈米樂 白瓶：30L / 10ml
+- Lenor 1week：30L / 15ml
 
-更新 GitHub：
-解壓後將 index.html、manifest.webmanifest、sw.js、README.txt 覆蓋上傳至 home-manager 根目錄並 Commit。
+每筆可編輯、刪除，也可新增其他品牌。
+保留 v0.6 的空氣清淨機、RO 五道濾芯、寵物、家事、採購與物品資料。
+
+GitHub 更新：
+解壓後把 index.html、manifest.webmanifest、sw.js、README.txt 覆蓋上傳到 home-manager 根目錄並 Commit。
