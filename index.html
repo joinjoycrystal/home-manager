@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f6f7f9">
+<link rel="manifest" href="manifest.webmanifest">
+<title>家務管家</title>
+<style>
+:root{
+  --bg:#f3f5f7; --card:#fff; --text:#1c1c1e; --muted:#73777f;
+  --line:#e7e9ed; --accent:#2f6fed; --soft:#edf3ff; --danger:#c9362b;
+  --warn:#a66b00; --ok:#157347;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;
+  padding:env(safe-area-inset-top) 0 calc(78px + env(safe-area-inset-bottom));
+}
+header{
+  position:sticky;top:0;z-index:20;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);padding:16px 16px 12px;
+}
+.brand{font-size:26px;font-weight:800}
+.subtitle{font-size:13px;color:var(--muted);margin-top:3px}
+main{max-width:820px;margin:auto;padding:14px}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{
+  background:var(--card);border-radius:18px;padding:15px;
+  box-shadow:0 2px 10px rgba(0,0,0,.04)
+}
+.stat .n{font-size:30px;font-weight:800;margin-top:3px}
+.stat .label{font-size:13px;color:var(--muted)}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:16px 2px 9px}
+h2,h3{margin:0}
+.panel{
+  background:var(--card);border-radius:18px;padding:0 14px;
+  box-shadow:0 2px 10px rgba(0,0,0,.035)
+}
+.item{padding:14px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item-title{font-weight:750;font-size:17px}
+.meta{font-size:13px;color:var(--muted);line-height:1.55;margin:5px 0 10px}
+.badge{display:inline-block;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:700;margin-left:6px}
+.badge.due{background:#fff0ef;color:var(--danger)}
+.badge.soon{background:#fff6df;color:var(--warn)}
+.badge.ok{background:#eaf7ef;color:var(--ok)}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+button{
+  font:inherit;cursor:pointer
+}
+.btn{
+  border:0;border-radius:11px;padding:9px 11px;font-weight:700
+}
+.btn.primary{background:var(--accent);color:white}
+.btn.soft{background:#eef0f3;color:#222}
+.btn.light{background:var(--soft);color:#255ac6}
+.btn.danger{background:#fff0ef;color:var(--danger)}
+nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  display:grid;grid-template-columns:repeat(6,1fr);
+  background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)
+}
+nav button{
+  border:0;background:transparent;padding:10px 2px 12px;
+  color:var(--muted);font-size:12px
+}
+nav button.active{color:var(--accent);font-weight:800}
+section{display:none}
+section.active{display:block}
+.empty{text-align:center;color:var(--muted);padding:28px 10px}
+dialog{
+  width:min(92vw,560px);max-height:86vh;overflow:auto;
+  border:0;border-radius:20px;padding:18px;background:white;
+}
+dialog::backdrop{background:rgba(0,0,0,.38)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}
+input,select,textarea{
+  width:100%;border:1px solid #cfd4da;border-radius:11px;
+  padding:11px 12px;font-size:16px;background:white
+}
+textarea{min-height:84px;resize:vertical}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.notice{
+  background:#f9fafb;border:1px solid var(--line);
+  border-radius:14px;padding:12px;font-size:13px;color:var(--muted);margin-top:10px
+}
+@media (max-width:560px){.form-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">家務管家</div>
+  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v0.8</span></div>
+</header>
+
+<main>
+<section id="home" class="active">
+  <div class="summary">
+    <div class="stat"><div class="label">今日／逾期家事</div><div class="n" id="homeChore">0</div></div>
+    <div class="stat"><div class="label">待更換耗材</div><div class="n" id="homeSupply">0</div></div>
+    <div class="stat"><div class="label">待購買</div><div class="n" id="homeBuy">0</div></div>
+    <div class="stat"><div class="label">物品資料</div><div class="n" id="homeItems">0</div></div>
+    <div class="stat"><div class="label">寵物項目</div><div class="n" id="homePet">0</div></div>
+  </div>
+  <div class="section-head"><h3>近期提醒</h3></div>
+  <div class="panel" id="reminders"></div>
+</section>
+
+<section id="chores">
+  <div class="section-head"><h2>家事</h2><button class="btn primary" onclick="openForm('chore')">＋ 新增</button></div>
+  <div class="panel" id="choreList"></div>
+</section>
+
+<section id="supplies">
+  <div class="section-head"><h2>耗材更換</h2><button class="btn primary" onclick="openForm('supply')">＋ 新增</button></div>
+  <div class="panel" id="supplyList"></div>
+</section>
+
+<section id="shopping">
+  <div class="section-head"><h2>採購</h2><button class="btn primary" onclick="openForm('shopping')">＋ 新增</button></div>
+  <div class="panel" id="shoppingList"></div>
+</section>
+
+<section id="items">
+  <div class="section-head"><h2>物品資料</h2><button class="btn primary" onclick="openForm('item')">＋ 新增物品</button></div>
+  <div class="panel" id="itemList"></div>
+
+  <div class="section-head" style="margin-top:24px">
+    <div>
+      <h2>洗衣精／柔軟精用量參考</h2>
+      <div class="subtitle">自動投入設定基準，以水量 30L 為主</div>
+    </div>
+    <button class="btn primary" onclick="openForm('laundryRef')">＋ 新增</button>
+  </div>
+  <div class="panel" id="laundryRefList"></div>
+</section>
+<section id="pets">
+  <div class="section-head"><h2>寵物</h2><button class="btn primary" onclick="openForm('pet')">＋ 新增</button></div>
+  <div class="panel" id="petList"></div>
+</section>
+</main>
+
+<nav>
+  <button class="active" data-tab="home">首頁</button>
+  <button data-tab="chores">家事</button>
+  <button data-tab="supplies">耗材</button>
+  <button data-tab="shopping">採購</button>
+  <button data-tab="items">物品</button>
+  <button data-tab="pets">寵物</button>
+</nav>
+
+<dialog id="editor">
+  <h3 id="formTitle"></h3>
+  <div id="fields"></div>
+  <div class="dialog-actions">
+    <button class="btn soft" onclick="editor.close()">取消</button>
+    <button class="btn primary" onclick="saveForm()">儲存</button>
+  </div>
+</dialog>
+
+<script>
+const KEY='homeManagerDataV08';
+const OLD_KEYS=['homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
+const today=()=>new Date().toISOString().slice(0,10);
+const addDays=(date,days)=>{
+  const d=new Date(date+'T12:00:00');
+  d.setDate(d.getDate()+Number(days||0));
+  return d.toISOString().slice(0,10);
+};
+const id=()=>crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()+Math.random();
+
+let data=loadData();
+
+if(!data.pets) data.pets=[];
+if(!data.laundryRefs) data.laundryRefs=[];
+
+function seedAirPurifiers(){
+  const presets=[
+    {name:'客廳 AC2939 濾網',model:'FY2180',last:'2024-05-10',cycle:1080,next:'2027-04-25'},
+    {name:'辦公室 AC1715 濾網',model:'FY1700',last:'2024-05-10',cycle:365,next:'2025-05-10'},
+    {name:'主臥 AC0850 濾網',model:'FY0293',last:'2024-05-10',cycle:365,next:'2025-05-10'},
+    {name:'兒童房 AC0650 濾網',model:'FY0611',last:'2024-05-10',cycle:365,next:'2025-05-10'}
+  ];
+  for(const x of presets){
+    const exists=data.supplies.some(s=>s.name===x.name || (s.model===x.model && s.name.includes(x.name.split(' ')[0])));
+    if(!exists) data.supplies.push({id:id(),...x});
+  }
+  localStorage.setItem(KEY,JSON.stringify(data));
+}
+seedAirPurifiers();
+
+function seedROFilters(){
+  const ro=[
+    {name:'RO淨水器 第1道｜PP 5微米濾芯',model:'PP 5微米',last:'',cycle:90,next:'',group:'RO淨水器'},
+    {name:'RO淨水器 第2道｜顆粒活性碳／樹脂濾芯',model:'顆粒活性碳／樹脂',last:'',cycle:180,next:'',group:'RO淨水器'},
+    {name:'RO淨水器 第3道｜PP 1微米／壓縮碳棒濾芯',model:'PP 1微米／壓縮碳棒',last:'',cycle:180,next:'',group:'RO淨水器'},
+    {name:'RO淨水器 第4道｜RO逆滲透膜',model:'RO逆滲透膜',last:'',cycle:365,next:'',maxCycle:730,nextLatest:'',group:'RO淨水器',rangeCycle:true},
+    {name:'RO淨水器 第5道｜後置活性碳濾芯',model:'後置活性碳',last:'',cycle:365,next:'',group:'RO淨水器'}
+  ];
+  for(const x of ro){
+    if(!data.supplies.some(s=>s.name===x.name)){
+      data.supplies.push({id:id(),...x});
+    }
+  }
+  localStorage.setItem(KEY,JSON.stringify(data));
+}
+seedROFilters();
+
+function seedLaundryRefs(){
+  const refs=[
+    {name:'Attack ZERO',brand:'花王',kind:'洗衣精',water:30,ml:10,source:'官方資料'},
+    {name:'Attack ZERO 自動投入專用',brand:'花王',kind:'洗衣精',water:30,ml:6,source:'官方資料'},
+    {name:'NANOX one',brand:'LION',kind:'洗衣精',water:30,ml:10,source:'官方資料'},
+    {name:'Attack 消臭Strong Gel',brand:'花王',kind:'洗衣精',water:30,ml:30,source:'官方資料'},
+    {name:'Attack 除菌Advance',brand:'花王',kind:'洗衣精',water:30,ml:30,source:'官方資料'},
+    {name:'Humming 消臭實感 自動投入專用',brand:'花王',kind:'柔軟精',water:30,ml:5,source:'官方資料'},
+    {name:'Humming 消臭實感',brand:'花王',kind:'柔軟精',water:30,ml:10,source:'官方資料'},
+    {name:'Humming 素肌おもい',brand:'花王',kind:'柔軟精',water:30,ml:10,source:'官方資料'},
+    {name:'Humming 非濃縮',brand:'花王',kind:'柔軟精',water:30,ml:20,source:'官方資料'},
+    {name:'Ariel',brand:'P&G',kind:'洗衣精',water:30,ml:24,source:'你提供的照片'},
+    {name:'奈米樂 白瓶',brand:'',kind:'洗衣精',water:30,ml:10,source:'你提供的照片'},
+    {name:'Lenor 1week',brand:'P&G',kind:'柔軟精',water:30,ml:15,source:'你提供的照片'}
+  ];
+  for(const r of refs){
+    if(!data.laundryRefs.some(x=>x.name===r.name)){
+      data.laundryRefs.push({id:id(),...r});
+    }
+  }
+  localStorage.setItem(KEY,JSON.stringify(data));
+}
+seedLaundryRefs();
+function loadData(){
+  let raw=localStorage.getItem(KEY);
+  if(raw) return JSON.parse(raw);
+  for(const k of OLD_KEYS){
+    const old=localStorage.getItem(k);
+    if(old){
+      try{
+        let o=JSON.parse(old);
+        let migrated = {
+          chores:o.chores || o.c || [],
+          supplies:o.supplies || o.s || [],
+          shopping:o.shopping || o.b || [],
+          items:o.items || o.i || [],
+          pets:o.pets || [],
+          laundryRefs:o.laundryRefs || []
+        };
+        localStorage.setItem(KEY,JSON.stringify(migrated));
+        return migrated;
+      }catch(e){}
+    }
+  }
+  return {chores:[],supplies:[],shopping:[],items:[],pets:[],laundryRefs:[]};
+}
+function persist(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function statusBadge(date){
+  if(!date) return '';
+  if(date<=today()) return '<span class="badge due">到期</span>';
+  const diff=Math.ceil((new Date(date+'T12:00')-new Date(today()+'T12:00'))/86400000);
+  if(diff<=7) return '<span class="badge soon">即將到期</span>';
+  return '<span class="badge ok">正常</span>';
+}
+document.querySelectorAll('nav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('section,nav button').forEach(x=>x.classList.remove('active'));
+    document.getElementById(b.dataset.tab).classList.add('active');
+    b.classList.add('active');
+  })
+});
+
+function render(){
+  const dueCh=data.chores.filter(x=>x.next && x.next<=today());
+  const dueSp=data.supplies.filter(x=>x.next && x.next<=today());
+  const buy=data.shopping.filter(x=>!x.done);
+
+  homeChore.textContent=dueCh.length;
+  homeSupply.textContent=dueSp.length;
+  homeBuy.textContent=buy.length;
+  homeItems.textContent=data.items.length;
+  homePet.textContent=data.pets.length;
+
+  const reminderRows=[
+    ...data.chores.filter(x=>x.next).map(x=>({type:'家事',name:x.name,date:x.next})),
+    ...data.supplies.filter(x=>x.next).map(x=>({type:'耗材',name:x.name,date:x.next})),
+    ...data.pets.filter(x=>x.next).map(x=>({type:'寵物',name:(x.petName+'｜'+x.task),date:x.next})),
+  ].sort((a,b)=>a.date.localeCompare(b.date)).slice(0,8);
+
+  reminders.innerHTML = (
+    reminderRows.map(x=>`<div class="item"><div class="item-title">${esc(x.name)} ${statusBadge(x.date)}</div><div class="meta">${x.type}・${x.date}</div></div>`).join('')
+    + buy.slice(0,5).map(x=>`<div class="item"><div class="item-title">${esc(x.name)} <span class="badge soon">待購</span></div><div class="meta">數量：${esc(x.qty)}</div></div>`).join('')
+  ) || '<div class="empty">目前沒有提醒</div>';
+
+  choreList.innerHTML=data.chores.map(x=>`
+    <div class="item">
+      <div class="item-title">${esc(x.name)} ${statusBadge(x.next)}</div>
+      <div class="meta">上次完成：${x.last||'-'}<br>週期：${x.cycle||'-'} 天・下次：${x.next||'-'}</div>
+      <div class="actions">
+        <button class="btn light" onclick="completeItem('chores','${x.id}')">✓ 已完成</button>
+        <button class="btn soft" onclick="editItem('chore','${x.id}')">編輯</button>
+        <button class="btn danger" onclick="deleteItem('chores','${x.id}')">刪除</button>
+      </div>
+    </div>`).join('') || '<div class="empty">目前沒有家事</div>';
+
+  supplyList.innerHTML=data.supplies.map(x=>`
+    <div class="item">
+      <div class="item-title">${esc(x.name)} ${statusBadge(x.next)}</div>
+      <div class="meta">型號：${esc(x.model||'-')}<br>上次更換：${x.last||'尚未設定'}<br>${x.rangeCycle ? `建議週期：1～2 年・建議區間：${x.next||'待設定'} ～ ${x.nextLatest||'待設定'}` : `週期：${x.cycle||'-'} 天・下次：${x.next||'待設定'}`}</div>
+      <div class="actions">
+        <button class="btn light" onclick="completeItem('supplies','${x.id}')">✓ 已更換</button>
+        <button class="btn soft" onclick="editItem('supply','${x.id}')">編輯</button>
+        <button class="btn danger" onclick="deleteItem('supplies','${x.id}')">刪除</button>
+      </div>
+    </div>`).join('') || '<div class="empty">目前沒有耗材</div>';
+
+  shoppingList.innerHTML=data.shopping.map(x=>`
+    <div class="item">
+      <div class="item-title">${esc(x.name)} ${x.done?'<span class="badge ok">已購買</span>':'<span class="badge soon">待購</span>'}</div>
+      <div class="meta">數量：${esc(x.qty||'1')}${x.note?'<br>備註：'+esc(x.note):''}</div>
+      <div class="actions">
+        <button class="btn light" onclick="toggleBuy('${x.id}')">${x.done?'恢復待購':'✓ 已購買'}</button>
+        <button class="btn soft" onclick="editItem('shopping','${x.id}')">編輯</button>
+        <button class="btn danger" onclick="deleteItem('shopping','${x.id}')">刪除</button>
+      </div>
+    </div>`).join('') || '<div class="empty">目前沒有採購項目</div>';
+
+  itemList.innerHTML=data.items.map(x=>{
+    const uses=Number(x.dose)>0 ? Math.floor(Number(x.capacity||0)/Number(x.dose)) : '-';
+    return `<div class="item">
+      <div class="item-title">${esc(x.name)}</div>
+      <div class="meta">
+        容量：${x.capacity||'-'} ml・每次：${x.dose||'-'} ml<br>
+        對應衣物：${x.kg||'-'} kg・自動投入：${x.auto||'-'} ml<br>
+        約可使用：${uses} 次
+      </div>
+      <div class="actions">
+        <button class="btn soft" onclick="editItem('item','${x.id}')">編輯</button>
+        <button class="btn danger" onclick="deleteItem('items','${x.id}')">刪除</button>
+      </div>
+    </div>`
+  }).join('') || '<div class="empty">目前沒有物品資料</div>';
+
+  petList.innerHTML=data.pets.map(x=>`
+    <div class="item">
+      <div class="item-title">${esc(x.petName)}｜${esc(x.task)} ${statusBadge(x.next)}</div>
+      <div class="meta">上次完成：${x.last||'-'}<br>週期：${x.cycle||'-'} 天・下次：${x.next||'-'}${x.note?'<br>備註：'+esc(x.note):''}</div>
+      <div class="actions">
+        <button class="btn light" onclick="completeItem('pets','${x.id}')">✓ 已完成</button>
+        <button class="btn soft" onclick="editItem('pet','${x.id}')">編輯</button>
+        <button class="btn danger" onclick="deleteItem('pets','${x.id}')">刪除</button>
+      </div>
+    </div>`).join('') || '<div class="empty">目前沒有寵物照護項目</div>';
+
+  laundryRefList.innerHTML=data.laundryRefs
+    .slice().sort((a,b)=>(a.kind+a.name).localeCompare(b.kind+b.name,'zh-Hant'))
+    .map(x=>`
+      <div class="item">
+        <div class="item-title">${esc(x.name)}
+          <span class="badge ${x.source==='官方資料'?'ok':'soon'}">${esc(x.source||'自訂')}</span>
+        </div>
+        <div class="meta">
+          ${x.brand?esc(x.brand)+'・':''}${esc(x.kind||'')}
+          <br><b style="color:#1c1c1e">水量 ${x.water||30}L → ${x.ml||'-'} ml</b>
+        </div>
+        <div class="actions">
+          <button class="btn soft" onclick="editItem('laundryRef','${x.id}')">編輯</button>
+          <button class="btn danger" onclick="deleteItem('laundryRefs','${x.id}')">刪除</button>
+        </div>
+      </div>`).join('') || '<div class="empty">目前沒有洗衣用量資料</div>';
+}
+
+function completeItem(type,itemId){
+  const x=data[type].find(v=>v.id===itemId);
+  if(!x) return;
+  x.last=today();
+  x.next=addDays(today(),x.cycle);
+  if(x.rangeCycle && x.maxCycle) x.nextLatest=addDays(today(),x.maxCycle);
+  persist();
+}
+function toggleBuy(itemId){
+  const x=data.shopping.find(v=>v.id===itemId);
+  if(!x) return;
+  x.done=!x.done;
+  persist();
+}
+function deleteItem(type,itemId){
+  if(!confirm('確定刪除這筆資料？')) return;
+  data[type]=data[type].filter(x=>x.id!==itemId);
+  persist();
+}
+
+let currentType='', editingId=null;
+const input=(label,name,type='text',value='')=>`
+  <label>${label}</label>
+  <input name="${name}" type="${type}" value="${esc(value)}">`;
+
+function openForm(type){
+  currentType=type; editingId=null;
+  fillForm(type,{});
+}
+function editItem(type,itemId){
+  currentType=type; editingId=itemId;
+  const map={chore:'chores',supply:'supplies',shopping:'shopping',item:'items',pet:'pets',laundryRef:'laundryRefs'};
+  const x=data[map[type]].find(v=>v.id===itemId);
+  fillForm(type,x||{});
+}
+function fillForm(type,x){
+  if(type==='chore'){
+    formTitle.textContent=editingId?'編輯家事':'新增家事';
+    fields.innerHTML=
+      input('家事名稱','name','text',x.name||'')+
+      '<div class="form-grid">'+
+      input('上次完成日期','last','date',x.last||today())+
+      input('週期（天）','cycle','number',x.cycle||7)+
+      '</div>';
+  }
+  if(type==='supply'){
+    formTitle.textContent=editingId?'編輯耗材':'新增耗材';
+    fields.innerHTML=
+      input('耗材名稱','name','text',x.name||'')+
+      input('型號','model','text',x.model||'')+
+      '<div class="form-grid">'+
+      input('上次更換日期','last','date',x.last||today())+
+      input('更換週期（天）','cycle','number',x.cycle||180)+
+      '</div>';
+  }
+  if(type==='shopping'){
+    formTitle.textContent=editingId?'編輯採購':'新增採購';
+    fields.innerHTML=
+      input('物品名稱','name','text',x.name||'')+
+      input('數量','qty','text',x.qty||'1')+
+      '<label>備註</label><textarea name="note">'+esc(x.note||'')+'</textarea>';
+  }
+  if(type==='item'){
+    formTitle.textContent=editingId?'編輯物品資料':'新增物品資料';
+    fields.innerHTML=
+      input('名稱','name','text',x.name||'')+
+      '<div class="form-grid">'+
+      input('容量 ml','capacity','number',x.capacity||x.cap||'')+
+      input('每次使用 ml','dose','number',x.dose||'')+
+      input('對應衣物 kg','kg','number',x.kg||'')+
+      input('自動投入 ml','auto','number',x.auto||'')+
+      '</div>'+
+      '<div class="notice">洗衣精等用品可直接用這裡比較容量與每次用量。</div>';
+  }
+  if(type==='pet'){
+    formTitle.textContent=editingId?'編輯寵物照護':'新增寵物照護';
+    fields.innerHTML=
+      input('寵物名稱','petName','text',x.petName||'')+
+      input('照護項目（例如：驅蟲藥、洗澡、剪指甲）','task','text',x.task||'')+
+      '<div class="form-grid">'+
+      input('上次完成日期','last','date',x.last||today())+
+      input('週期（天）','cycle','number',x.cycle||30)+
+      '</div>'+
+      '<label>備註</label><textarea name="note">'+esc(x.note||'')+'</textarea>';
+  }
+  if(type==='laundryRef'){
+    formTitle.textContent=editingId?'編輯洗衣用量':'新增洗衣用量';
+    fields.innerHTML=
+      input('品名','name','text',x.name||'')+
+      '<div class="form-grid">'+
+      input('品牌','brand','text',x.brand||'')+
+      input('類型（洗衣精／柔軟精）','kind','text',x.kind||'洗衣精')+
+      input('基準水量 L','water','number',x.water||30)+
+      input('使用量 ml','ml','number',x.ml||'')+
+      '</div>'+
+      input('資料來源','source','text',x.source||'自訂');
+  }
+  editor.showModal();
+}
+
+function saveForm(){
+  const q={};
+  fields.querySelectorAll('input,textarea,select').forEach(el=>q[el.name]=el.value);
+  const map={chore:'chores',supply:'supplies',shopping:'shopping',item:'items',pet:'pets',laundryRef:'laundryRefs'};
+  const arr=data[map[currentType]];
+  let x=editingId ? arr.find(v=>v.id===editingId) : null;
+  if(!x){x={id:id()};arr.push(x)}
+
+  if(currentType==='chore'){
+    x.name=q.name.trim(); x.last=q.last||today(); x.cycle=Number(q.cycle||7); x.next=addDays(x.last,x.cycle);
+  }
+  if(currentType==='supply'){
+    x.name=q.name.trim(); x.model=q.model.trim(); x.last=q.last||today(); x.cycle=Number(q.cycle||180); x.next=addDays(x.last,x.cycle);
+    if(x.rangeCycle && x.maxCycle) x.nextLatest=addDays(x.last,x.maxCycle);
+  }
+  if(currentType==='shopping'){
+    x.name=q.name.trim(); x.qty=q.qty||'1'; x.note=q.note||''; if(typeof x.done!=='boolean') x.done=false;
+  }
+  if(currentType==='item'){
+    x.name=q.name.trim(); x.capacity=Number(q.capacity||0); x.dose=Number(q.dose||0); x.kg=Number(q.kg||0); x.auto=Number(q.auto||0);
+  }
+  if(currentType==='pet'){
+    x.petName=q.petName.trim(); x.task=q.task.trim(); x.last=q.last||today(); x.cycle=Number(q.cycle||30); x.next=addDays(x.last,x.cycle); x.note=q.note||'';
+  }
+  if(currentType==='laundryRef'){
+    x.name=q.name.trim(); x.brand=q.brand.trim(); x.kind=q.kind.trim(); x.water=Number(q.water||30); x.ml=Number(q.ml||0); x.source=q.source.trim()||'自訂';
+  }
+  editor.close(); persist();
+}
+render();
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js?v=08').then(reg=>reg.update()).catch(()=>{});
+}
+</script>
+</body>
+</html>
