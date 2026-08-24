@@ -96,7 +96,7 @@ textarea{min-height:84px;resize:vertical}
 <body>
 <header>
   <div class="brand">家務管家</div>
-  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v0.8</span></div>
+  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v0.9</span></div>
 </header>
 
 <main>
@@ -165,8 +165,8 @@ textarea{min-height:84px;resize:vertical}
 </dialog>
 
 <script>
-const KEY='homeManagerDataV08';
-const OLD_KEYS=['homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
+const KEY='homeManagerDataV09';
+const OLD_KEYS=['homeManagerDataV08','homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
 const today=()=>new Date().toISOString().slice(0,10);
 const addDays=(date,days)=>{
   const d=new Date(date+'T12:00:00');
@@ -174,6 +174,11 @@ const addDays=(date,days)=>{
   return d.toISOString().slice(0,10);
 };
 const id=()=>crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()+Math.random();
+const addMonths=(date,n)=>{if(!date)return '';let [y,m,d]=date.split('-').map(Number);let x=new Date(y,m-1+Number(n),1,12);let last=new Date(x.getFullYear(),x.getMonth()+1,0,12).getDate();x.setDate(Math.min(d,last));return x.toISOString().slice(0,10)};
+const addYears=(date,n)=>addMonths(date,Number(n)*12);
+const calcNext=(date,v,u)=>u==='month'?addMonths(date,v):u==='year'?addYears(date,v):u==='week'?addDays(date,Number(v)*7):addDays(date,v);
+const cycleText=x=>{let u=x.cycleUnit||'day',v=Number(x.cycleValue||x.cycle||0);return u==='month'?`每 ${v} 個月`:u==='year'?`每 ${v} 年`:u==='week'?`每 ${v} 週`:`每 ${v} 天`};
+
 
 let data=loadData();
 
@@ -235,6 +240,20 @@ function seedLaundryRefs(){
   localStorage.setItem(KEY,JSON.stringify(data));
 }
 seedLaundryRefs();
+function seedHouseholdChores(){
+ const a=[
+ ['廁所清潔',1,'week'],['浴室深度清潔',1,'month'],['更換床單／被套',2,'week'],['枕套更換',1,'week'],
+ ['吸塵／掃地',3,'day'],['拖地',1,'week'],['沙發清潔',1,'month'],['冰箱整理／過期檢查',1,'month'],
+ ['冰箱內部清潔',3,'month'],['洗衣機清潔',1,'month'],['烘衣機／洗衣機濾網清潔',2,'week'],
+ ['冷氣濾網清潔',1,'month'],['抽油煙機濾網清潔',1,'month'],['排水孔清潔',1,'month'],
+ ['水龍頭／蓮蓬頭水垢清潔',1,'month'],['窗戶／紗窗清潔',3,'month'],['衣櫃整理',3,'month'],
+ ['鞋櫃整理',3,'month'],['藥品／家庭備品效期檢查',6,'month'],['全屋深度清潔',6,'month'],
+ ['掃地機器人主機清潔',1,'month']
+ ];
+ for(const [name,v,u] of a) if(!data.chores.some(x=>x.name===name)) data.chores.push({id:id(),name,last:'',cycleValue:v,cycleUnit:u,cycle:u==='week'?v*7:u==='day'?v:0,next:''});
+ localStorage.setItem(KEY,JSON.stringify(data));
+}
+seedHouseholdChores();
 function loadData(){
   let raw=localStorage.getItem(KEY);
   if(raw) return JSON.parse(raw);
@@ -300,7 +319,7 @@ function render(){
   choreList.innerHTML=data.chores.map(x=>`
     <div class="item">
       <div class="item-title">${esc(x.name)} ${statusBadge(x.next)}</div>
-      <div class="meta">上次完成：${x.last||'-'}<br>週期：${x.cycle||'-'} 天・下次：${x.next||'-'}</div>
+      <div class="meta">上次完成：${x.last||'-'}<br>週期：${cycleText(x)}・下次：${x.next||'-'}</div>
       <div class="actions">
         <button class="btn light" onclick="completeItem('chores','${x.id}')">✓ 已完成</button>
         <button class="btn soft" onclick="editItem('chore','${x.id}')">編輯</button>
@@ -349,7 +368,7 @@ function render(){
   petList.innerHTML=data.pets.map(x=>`
     <div class="item">
       <div class="item-title">${esc(x.petName)}｜${esc(x.task)} ${statusBadge(x.next)}</div>
-      <div class="meta">上次完成：${x.last||'-'}<br>週期：${x.cycle||'-'} 天・下次：${x.next||'-'}${x.note?'<br>備註：'+esc(x.note):''}</div>
+      <div class="meta">上次完成：${x.last||'-'}<br>週期：${cycleText(x)}・下次：${x.next||'-'}${x.note?'<br>備註：'+esc(x.note):''}</div>
       <div class="actions">
         <button class="btn light" onclick="completeItem('pets','${x.id}')">✓ 已完成</button>
         <button class="btn soft" onclick="editItem('pet','${x.id}')">編輯</button>
@@ -379,7 +398,7 @@ function completeItem(type,itemId){
   const x=data[type].find(v=>v.id===itemId);
   if(!x) return;
   x.last=today();
-  x.next=addDays(today(),x.cycle);
+  x.next=((type==='chores'||type==='pets')&&x.cycleUnit)?calcNext(x.last,x.cycleValue||1,x.cycleUnit):addDays(today(),x.cycle);
   if(x.rangeCycle && x.maxCycle) x.nextLatest=addDays(today(),x.maxCycle);
   persist();
 }
@@ -399,6 +418,9 @@ let currentType='', editingId=null;
 const input=(label,name,type='text',value='')=>`
   <label>${label}</label>
   <input name="${name}" type="${type}" value="${esc(value)}">`;
+const unitSelect=v=>`<label>週期單位</label><select name="cycleUnit"><option value="day" ${v==='day'?'selected':''}>天</option><option value="week" ${v==='week'?'selected':''}>週</option><option value="month" ${v==='month'?'selected':''}>月</option><option value="year" ${v==='year'?'selected':''}>年</option></select>`;
+const petSelect=v=>`<label>照護項目</label><select name="task" id="petTaskSelect" onchange="applyPetDefault()"><option value="驅蟲藥" ${v==='驅蟲藥'?'selected':''}>驅蟲藥</option><option value="洗澡" ${v==='洗澡'?'selected':''}>洗澡</option><option value="疫苗" ${v==='疫苗'?'selected':''}>疫苗</option></select>`;
+
 
 function openForm(type){
   currentType=type; editingId=null;
@@ -413,12 +435,7 @@ function editItem(type,itemId){
 function fillForm(type,x){
   if(type==='chore'){
     formTitle.textContent=editingId?'編輯家事':'新增家事';
-    fields.innerHTML=
-      input('家事名稱','name','text',x.name||'')+
-      '<div class="form-grid">'+
-      input('上次完成日期','last','date',x.last||today())+
-      input('週期（天）','cycle','number',x.cycle||7)+
-      '</div>';
+    fields.innerHTML=input('家事名稱','name','text',x.name||'')+'<div class="form-grid">'+input('上次完成日期','last','date',x.last||'')+input('週期數值','cycleValue','number',x.cycleValue||1)+unitSelect(x.cycleUnit||'week')+'</div>';
   }
   if(type==='supply'){
     formTitle.textContent=editingId?'編輯耗材':'新增耗材';
@@ -451,14 +468,8 @@ function fillForm(type,x){
   }
   if(type==='pet'){
     formTitle.textContent=editingId?'編輯寵物照護':'新增寵物照護';
-    fields.innerHTML=
-      input('寵物名稱','petName','text',x.petName||'')+
-      input('照護項目（例如：驅蟲藥、洗澡、剪指甲）','task','text',x.task||'')+
-      '<div class="form-grid">'+
-      input('上次完成日期','last','date',x.last||today())+
-      input('週期（天）','cycle','number',x.cycle||30)+
-      '</div>'+
-      '<label>備註</label><textarea name="note">'+esc(x.note||'')+'</textarea>';
+    const task=x.task||'驅蟲藥', unit=x.cycleUnit||(task==='疫苗'?'year':'month');
+    fields.innerHTML=input('寵物名稱','petName','text',x.petName||'')+petSelect(task)+'<div class="form-grid">'+input('上次完成日期','last','date',x.last||today())+input('週期數值','cycleValue','number',x.cycleValue||1)+unitSelect(unit)+'</div><label>備註</label><textarea name="note">'+esc(x.note||'')+'</textarea>';
   }
   if(type==='laundryRef'){
     formTitle.textContent=editingId?'編輯洗衣用量':'新增洗衣用量';
@@ -475,6 +486,7 @@ function fillForm(type,x){
   editor.showModal();
 }
 
+function applyPetDefault(){let task=document.getElementById('petTaskSelect')?.value,v=fields.querySelector('[name="cycleValue"]'),u=fields.querySelector('[name="cycleUnit"]');if(v&&u){v.value=1;u.value=task==='疫苗'?'year':'month';}}
 function saveForm(){
   const q={};
   fields.querySelectorAll('input,textarea,select').forEach(el=>q[el.name]=el.value);
@@ -484,7 +496,7 @@ function saveForm(){
   if(!x){x={id:id()};arr.push(x)}
 
   if(currentType==='chore'){
-    x.name=q.name.trim(); x.last=q.last||today(); x.cycle=Number(q.cycle||7); x.next=addDays(x.last,x.cycle);
+    x.name=q.name.trim();x.last=q.last||'';x.cycleValue=Number(q.cycleValue||1);x.cycleUnit=q.cycleUnit||'week';x.cycle=x.cycleUnit==='week'?x.cycleValue*7:x.cycleUnit==='day'?x.cycleValue:0;x.next=x.last?calcNext(x.last,x.cycleValue,x.cycleUnit):'';
   }
   if(currentType==='supply'){
     x.name=q.name.trim(); x.model=q.model.trim(); x.last=q.last||today(); x.cycle=Number(q.cycle||180); x.next=addDays(x.last,x.cycle);
@@ -497,7 +509,7 @@ function saveForm(){
     x.name=q.name.trim(); x.capacity=Number(q.capacity||0); x.dose=Number(q.dose||0); x.kg=Number(q.kg||0); x.auto=Number(q.auto||0);
   }
   if(currentType==='pet'){
-    x.petName=q.petName.trim(); x.task=q.task.trim(); x.last=q.last||today(); x.cycle=Number(q.cycle||30); x.next=addDays(x.last,x.cycle); x.note=q.note||'';
+    x.petName=q.petName.trim();x.task=q.task;x.last=q.last||today();x.cycleValue=Number(q.cycleValue||1);x.cycleUnit=q.cycleUnit||(x.task==='疫苗'?'year':'month');x.cycle=0;x.next=calcNext(x.last,x.cycleValue,x.cycleUnit);x.note=q.note||'';
   }
   if(currentType==='laundryRef'){
     x.name=q.name.trim(); x.brand=q.brand.trim(); x.kind=q.kind.trim(); x.water=Number(q.water||30); x.ml=Number(q.ml||0); x.source=q.source.trim()||'自訂';
@@ -507,7 +519,7 @@ function saveForm(){
 render();
 
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js?v=08').then(reg=>reg.update()).catch(()=>{});
+  navigator.serviceWorker.register('./sw.js?v=09').then(reg=>reg.update()).catch(()=>{});
 }
 </script>
 </body>
