@@ -55,6 +55,16 @@ button{
   border:0;border-radius:11px;padding:9px 11px;font-weight:700
 }
 .btn.primary{background:var(--accent);color:white}
+.btn.google{background:#1a73e8;color:#fff;border:0;box-shadow:0 1px 3px rgba(26,115,232,.25)}
+.batchbar{background:#fff;border-radius:16px;padding:12px;margin:12px 0;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+.batchrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.batchrow .btn{flex:0 0 auto}
+.eventrow{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+.eventcheck{width:22px;height:22px;margin-top:2px}
+.synced{font-size:12px;color:#157347;font-weight:700}
+.unsynced{font-size:12px;color:#a66b00;font-weight:700}
+
+.btn.google:active{transform:translateY(1px)}
 .btn.soft{background:#eef0f3;color:#222}
 .btn.light{background:var(--soft);color:#255ac6}
 .btn.danger{background:#fff0ef;color:var(--danger)}
@@ -96,11 +106,22 @@ textarea{min-height:84px;resize:vertical}
 <body>
 <header>
   <div class="brand">家務管家</div>
-  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v1.3</span></div>
+  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v1.5</span></div>
 </header>
 
 <main>
 <section id="home" class="active">
+  <div class="batchbar">
+    <div style="font-weight:800;margin-bottom:8px">批次同步 Google Calendar</div>
+    <div class="batchrow">
+      <button class="btn soft" onclick="selectRange('today')">全選今天</button>
+      <button class="btn soft" onclick="selectRange('7days')">全選未來7天</button>
+      <button class="btn soft" onclick="selectRange('month')">全選本月</button>
+      <button class="btn soft" onclick="clearSelection()">清除選取</button>
+      <button class="btn google" onclick="syncSelected()">同步勾選項目</button>
+    </div>
+    <div class="notice">第一次使用真正批次同步時，需要先設定 Google Calendar API。未設定前仍可用每筆藍色按鈕開啟 Google 日曆。</div>
+  </div>
   <div class="summary">
     <div class="stat"><div class="label">今日／逾期家事</div><div class="n" id="homeChore">0</div></div>
     <div class="stat"><div class="label">待更換耗材</div><div class="n" id="homeSupply">0</div></div>
@@ -108,7 +129,7 @@ textarea{min-height:84px;resize:vertical}
     <div class="stat"><div class="label">物品資料</div><div class="n" id="homeItems">0</div></div>
     <div class="stat"><div class="label">寵物項目</div><div class="n" id="homePet">0</div></div>
   </div>
-  <div class="section-head"><h3>近期提醒</h3><button class="btn primary" onclick="allGcal()">全部加入 Google Calendar</button></div>
+  <div class="section-head"><h3>近期提醒</h3></div>
   <div class="panel" id="reminders"></div>
 </section>
 
@@ -171,8 +192,8 @@ textarea{min-height:84px;resize:vertical}
 </dialog>
 
 <script>
-const KEY='homeManagerDataV13';
-const OLD_KEYS=['homeManagerDataV12','homeManagerDataV11','homeManagerDataV10','homeManagerDataV09','homeManagerDataV08','homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
+const KEY='homeManagerDataV15';
+const OLD_KEYS=['homeManagerDataV14','homeManagerDataV13','homeManagerDataV12','homeManagerDataV11','homeManagerDataV10','homeManagerDataV09','homeManagerDataV08','homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
 const today=()=>new Date().toISOString().slice(0,10);
 const addDays=(date,days)=>{
   const d=new Date(date+'T12:00:00');
@@ -186,6 +207,62 @@ const calcNext=(date,v,u)=>u==='month'?addMonths(date,v):u==='year'?addYears(dat
 const cycleText=x=>{let u=x.cycleUnit||'day',v=Number(x.cycleValue||x.cycle||0);return u==='month'?`每 ${v} 個月`:u==='year'?`每 ${v} 年`:u==='week'?`每 ${v} 週`:`每 ${v} 天`};
 const timeText=x=>x.time||'09:00';
 const nextText=x=>(x.next||'尚未設定')+' '+timeText(x);
+const purchaseReminderDate=x=>x.next?addDays(x.next,-7):'';
+let selectedEventIds=new Set();
+
+function eventId(type,id,kind='main'){return type+'|'+id+'|'+kind;}
+function buildUnifiedEvents(){
+  const ev=[];
+  for(const x of data.chores||[]) if(x.next) ev.push({eid:eventId('chore',x.id),type:'家事',title:'家事｜'+x.name,date:x.next,time:x.time||'09:00',sourceType:'chores',sourceId:x.id});
+  for(const x of data.pets||[]) if(x.next) ev.push({eid:eventId('pet',x.id),type:'寵物',title:'寵物｜'+x.petName+'｜'+x.task,date:x.next,time:x.time||'09:00',sourceType:'pets',sourceId:x.id});
+  for(const x of data.schedules||[]) if(x.next) ev.push({eid:eventId('schedule',x.id),type:'行程',title:x.title,date:x.next,time:x.time||'09:00',sourceType:'schedules',sourceId:x.id});
+  for(const x of data.supplies||[]) if(x.next){
+    ev.push({eid:eventId('supply',x.id),type:'耗材',title:'耗材更換｜'+x.name,date:x.next,time:x.time||'09:00',sourceType:'supplies',sourceId:x.id});
+    ev.push({eid:eventId('supply',x.id,'buy'),type:'購買提醒',title:'購買提醒｜'+x.name,date:purchaseReminderDate(x),time:x.time||'09:00',sourceType:'supplies',sourceId:x.id});
+  }
+  return ev.filter(x=>x.date).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+}
+function markSelection(eid,checked){checked?selectedEventIds.add(eid):selectedEventIds.delete(eid);}
+function clearSelection(){selectedEventIds.clear();render();}
+function selectRange(mode){
+  selectedEventIds.clear();
+  const now=today(), d0=new Date(now+'T12:00:00');
+  const month=now.slice(0,7);
+  for(const e of buildUnifiedEvents()){
+    if(mode==='today' && e.date===now) selectedEventIds.add(e.eid);
+    if(mode==='month' && e.date.startsWith(month)) selectedEventIds.add(e.eid);
+    if(mode==='7days'){
+      const d=new Date(e.date+'T12:00:00'), diff=Math.floor((d-d0)/86400000);
+      if(diff>=0 && diff<=7) selectedEventIds.add(e.eid);
+    }
+  }
+  render();
+}
+function isSynced(e){
+  const arr=data[e.sourceType]||[], x=arr.find(v=>v.id===e.sourceId);
+  if(!x) return false;
+  return Array.isArray(x.syncedKeys) && x.syncedKeys.includes(e.eid+'@'+e.date+'T'+e.time);
+}
+function markSynced(e){
+  const arr=data[e.sourceType]||[], x=arr.find(v=>v.id===e.sourceId);
+  if(!x) return;
+  if(!Array.isArray(x.syncedKeys)) x.syncedKeys=[];
+  const key=e.eid+'@'+e.date+'T'+e.time;
+  if(!x.syncedKeys.includes(key)) x.syncedKeys.push(key);
+}
+function googleApiReady(){
+  return !!localStorage.getItem('hmGoogleClientId');
+}
+function syncSelected(){
+  const ev=buildUnifiedEvents().filter(e=>selectedEventIds.has(e.eid));
+  if(!ev.length){alert('請先勾選要同步的事件');return;}
+  if(!googleApiReady()){
+    alert('目前尚未設定 Google Calendar API。下一步需要 Google Cloud OAuth Client ID，設定後就能一次把勾選事件直接寫入行事曆。');
+    return;
+  }
+  alert('Google Calendar API 已設定後，這裡會一次同步 '+ev.length+' 筆事件。');
+}
+
 
 
 
@@ -206,7 +283,12 @@ function gcal(title,date,details='家務管家',time=''){
 function allGcal(){
  const a=[];
  data.chores.forEach(x=>{if(x.next)a.push(['家事｜'+x.name,x.next,'家務管家',x.time||'09:00'])});
- data.supplies.forEach(x=>{if(x.next)a.push(['耗材更換｜'+x.name,x.next,'家務管家｜型號 '+(x.model||''),x.time||'09:00'])});
+ data.supplies.forEach(x=>{
+   if(x.next){
+     a.push(['耗材更換｜'+x.name,x.next,'家務管家｜型號 '+(x.model||''),x.time||'09:00']);
+     a.push(['購買提醒｜'+x.name,purchaseReminderDate(x),'家務管家｜請準備購買更換耗材｜型號 '+(x.model||''),x.time||'09:00']);
+   }
+ });
  data.pets.forEach(x=>{if(x.next)a.push(['寵物｜'+x.petName+'｜'+x.task,x.next,'家務管家',x.time||'09:00'])}); data.schedules.forEach(x=>{if(x.next)a.push([x.title,x.next,'家務管家｜行程',x.time||''])});
  if(!a.length){alert('目前沒有可加入的日期');return;}
  alert('「全部加入」會依序建立事件。iPhone 若阻擋多個視窗，請改用每筆的 Google 行事曆按鈕。');
@@ -357,13 +439,25 @@ function render(){
   const reminderRows=[
     ...data.chores.filter(x=>x.next).map(x=>({type:'家事',name:x.name,date:x.next})),
     ...data.supplies.filter(x=>x.next).map(x=>({type:'耗材',name:x.name,date:x.next})),
+    ...data.supplies.filter(x=>x.next).map(x=>({type:'購買提醒',name:'購買｜'+x.name,date:purchaseReminderDate(x)})),
     ...data.pets.filter(x=>x.next).map(x=>({type:'寵物',name:(x.petName+'｜'+x.task),date:x.next})),
   ].sort((a,b)=>a.date.localeCompare(b.date)).slice(0,8);
 
-  reminders.innerHTML = (
-    reminderRows.map(x=>`<div class="item"><div class="item-title">${esc(x.name)} ${statusBadge(x.date)}</div><div class="meta">${x.type}・${x.date}</div></div>`).join('')
-    + buy.slice(0,5).map(x=>`<div class="item"><div class="item-title">${esc(x.name)} <span class="badge soon">待購</span></div><div class="meta">數量：${esc(x.qty)}</div></div>`).join('')
-  ) || '<div class="empty">目前沒有提醒</div>';
+  const homeEvents=buildUnifiedEvents();
+  reminders.innerHTML = homeEvents.map(e=>`
+    <div class="item">
+      <div class="eventrow">
+        <input class="eventcheck" type="checkbox" ${selectedEventIds.has(e.eid)?'checked':''} onchange="markSelection('${e.eid}',this.checked)">
+        <div>
+          <div class="item-title">${esc(e.title)} ${statusBadge(e.date)}</div>
+          <div class="meta">${e.date} ${e.time}・${esc(e.type)}</div>
+          <div class="${isSynced(e)?'synced':'unsynced'}">${isSynced(e)?'已同步':'未同步'}</div>
+          <div class="actions" style="margin-top:7px">
+            <button class="btn google" onclick="gcal('${esc(e.title)}','${e.date}','家務管家','${e.time}')">一鍵上 Google 日曆</button>
+          </div>
+        </div>
+      </div>
+    </div>`).join('') || '<div class="empty">目前沒有提醒</div>';
 
   choreList.innerHTML=data.chores.map(x=>`
     <div class="item">
@@ -371,7 +465,7 @@ function render(){
       <div class="meta">上次完成：${x.last||'-'}<br>週期：${cycleText(x)}・下次：${nextText(x)}</div>
       <div class="actions">
         <button class="btn light" onclick="completeItem('chores','${x.id}')">✓ 已完成</button>
-<button class="btn soft" onclick="gcal('家事｜${esc(x.name)}','${x.next||''}','家務管家','${x.time||'09:00'}')">Google 行事曆</button>
+<button class="btn google" onclick="gcal('家事｜${esc(x.name)}','${x.next||''}','家務管家','${x.time||'09:00'}')">一鍵上 Google 日曆</button>
         <button class="btn soft" onclick="editItem('chore','${x.id}')">編輯</button>
         <button class="btn danger" onclick="deleteItem('chores','${x.id}')">刪除</button>
       </div>
@@ -380,10 +474,11 @@ function render(){
   supplyList.innerHTML=data.supplies.map(x=>`
     <div class="item">
       <div class="item-title">${esc(x.name)} ${statusBadge(x.next)}</div>
-      <div class="meta">型號：${esc(x.model||'-')}<br>上次更換：${x.last||'尚未設定'}<br>${x.rangeCycle ? `建議週期：1～2 年・建議區間：${x.next||'待設定'} ～ ${x.nextLatest||'待設定'}・時間 ${timeText(x)}` : `週期：${x.cycle||'-'} 天・下次：${x.next||'待設定'} ${timeText(x)}`}</div>
+      <div class="meta">型號：${esc(x.model||'-')}<br>上次更換：${x.last||'尚未設定'}<br>${x.rangeCycle ? `建議週期：1～2 年・建議區間：${x.next||'待設定'} ～ ${x.nextLatest||'待設定'}・時間 ${timeText(x)}<br>購買提醒：${purchaseReminderDate(x)||'待設定'}（提前 7 天）` : `週期：${x.cycle||'-'} 天・下次：${x.next||'待設定'} ${timeText(x)}<br>購買提醒：${purchaseReminderDate(x)||'待設定'}（提前 7 天）`}</div>
       <div class="actions">
         <button class="btn light" onclick="completeItem('supplies','${x.id}')">✓ 已更換</button>
-<button class="btn soft" onclick="gcal('耗材更換｜${esc(x.name)}','${x.next||''}','家務管家｜型號 ${esc(x.model||'')}','${x.time||'09:00'}')">Google 行事曆</button>
+        <button class="btn google" onclick="gcal('購買提醒｜${esc(x.name)}','${purchaseReminderDate(x)}','家務管家｜請準備購買更換耗材｜型號 ${esc(x.model||'')}','${x.time||'09:00'}')">一鍵上購買提醒</button>
+<button class="btn google" onclick="gcal('耗材更換｜${esc(x.name)}','${x.next||''}','家務管家｜型號 ${esc(x.model||'')}','${x.time||'09:00'}')">一鍵上 Google 日曆</button>
         <button class="btn soft" onclick="editItem('supply','${x.id}')">編輯</button>
         <button class="btn danger" onclick="deleteItem('supplies','${x.id}')">刪除</button>
       </div>
@@ -422,7 +517,7 @@ function render(){
       <div class="meta">上次完成：${x.last||'-'}<br>週期：${cycleText(x)}・下次：${nextText(x)}${x.note?'<br>備註：'+esc(x.note):''}</div>
       <div class="actions">
         <button class="btn light" onclick="completeItem('pets','${x.id}')">✓ 已完成</button>
-<button class="btn soft" onclick="gcal('寵物｜${esc(x.petName)}｜${esc(x.task)}','${x.next||''}','家務管家','${x.time||'09:00'}')">Google 行事曆</button>
+<button class="btn google" onclick="gcal('寵物｜${esc(x.petName)}｜${esc(x.task)}','${x.next||''}','家務管家','${x.time||'09:00'}')">一鍵上 Google 日曆</button>
         <button class="btn soft" onclick="editItem('pet','${x.id}')">編輯</button>
         <button class="btn danger" onclick="deleteItem('pets','${x.id}')">刪除</button>
       </div>
@@ -450,7 +545,7 @@ function render(){
       <div class="meta">上次日期：${x.last||'尚未設定'}<br>週期：${cycleText(x)}・下次：${x.next||'請設定日期'}<br>時間：${x.time||'未設定'}${x.note?'<br>備註：'+esc(x.note):''}</div>
       <div class="actions">
         <button class="btn light" onclick="completeItem('schedules','${x.id}')">✓ 已完成</button>
-        <button class="btn soft" onclick="gcal('${esc(x.title)}','${x.next||''}','家務管家｜行程','${x.time||''}')">Google 行事曆</button>
+        <button class="btn google" onclick="gcal('${esc(x.title)}','${x.next||''}','家務管家｜行程','${x.time||''}')">一鍵上 Google 日曆</button>
         <button class="btn soft" onclick="editItem('schedule','${x.id}')">編輯</button>
         <button class="btn danger" onclick="deleteItem('schedules','${x.id}')">刪除</button>
       </div>
@@ -663,7 +758,7 @@ function saveForm(){
 render();
 
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js?v=13').then(reg=>reg.update()).catch(()=>{});
+  navigator.serviceWorker.register('./sw.js?v=15').then(reg=>reg.update()).catch(()=>{});
 }
 </script>
 </body>
