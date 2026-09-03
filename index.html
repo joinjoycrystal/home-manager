@@ -62,7 +62,7 @@ button{
 .eventrow{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
 .eventcheck{width:22px;height:22px;margin-top:2px}
 .synced{font-size:12px;color:#157347;font-weight:700}
-.unsynced{font-size:12px;color:#a66b00;font-weight:700}
+.unsynced{font-size:12px;color:#a66b00;font-weight:700}.inv-controls{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 14px}.qtybox{display:flex;align-items:center;gap:8px;margin-top:8px}.qtynum{min-width:48px;text-align:center;font-size:20px;font-weight:800}.category-title{font-size:18px;font-weight:850;margin:18px 2px 8px}
 
 .btn.google:active{transform:translateY(1px)}
 .btn.soft{background:#eef0f3;color:#222}
@@ -70,7 +70,7 @@ button{
 .btn.danger{background:#fff0ef;color:var(--danger)}
 nav{
   position:fixed;left:0;right:0;bottom:0;z-index:30;
-  display:grid;grid-template-columns:repeat(7,1fr);
+  display:grid;grid-template-columns:repeat(8,1fr);
   background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
   border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom)
@@ -106,7 +106,7 @@ textarea{min-height:84px;resize:vertical}
 <body>
 <header>
   <div class="brand">家務管家</div>
-  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v1.5</span></div>
+  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v1.6</span></div>
 </header>
 
 <main>
@@ -170,7 +170,7 @@ textarea{min-height:84px;resize:vertical}
   <div class="section-head"><h2>行程</h2><button class="btn primary" onclick="openForm('schedule')">＋ 新增</button></div>
   <div class="panel" id="scheduleList"></div>
 </section>
-</main>
+<section id="inventory"><div class="section-head"><h2>冰箱＋家庭庫存</h2><button class="btn primary" onclick="openForm('inventory')">＋ 新增</button></div><div class="inv-controls"><button class="btn soft" onclick="setInvFilter('全部')">全部</button><button class="btn soft" onclick="setInvFilter('冰箱／冷凍庫')">冰箱／冷凍庫</button><button class="btn soft" onclick="setInvFilter('家庭常備')">家庭常備</button><button class="btn soft" onclick="setInvFilter('庫存不足')">庫存不足</button><button class="btn soft" onclick="setInvFilter('即將過期')">即將過期</button></div><div id="inventoryList"></div></section></main>
 
 <nav>
   <button class="active" data-tab="home">首頁</button>
@@ -179,7 +179,7 @@ textarea{min-height:84px;resize:vertical}
   <button data-tab="shopping">採購</button>
   <button data-tab="items">物品</button>
   <button data-tab="pets">寵物</button>
-  <button data-tab="schedules">行程</button>
+  <button data-tab="schedules">行程</button><button data-tab="inventory">庫存</button>
 </nav>
 
 <dialog id="editor">
@@ -192,8 +192,8 @@ textarea{min-height:84px;resize:vertical}
 </dialog>
 
 <script>
-const KEY='homeManagerDataV15';
-const OLD_KEYS=['homeManagerDataV14','homeManagerDataV13','homeManagerDataV12','homeManagerDataV11','homeManagerDataV10','homeManagerDataV09','homeManagerDataV08','homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
+const KEY='homeManagerDataV16';
+const OLD_KEYS=['homeManagerDataV15','homeManagerDataV14','homeManagerDataV13','homeManagerDataV12','homeManagerDataV11','homeManagerDataV10','homeManagerDataV09','homeManagerDataV08','homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
 const today=()=>new Date().toISOString().slice(0,10);
 const addDays=(date,days)=>{
   const d=new Date(date+'T12:00:00');
@@ -305,6 +305,7 @@ for(const x of data.schedules||[]) if(!x.time) x.time='09:00';
 if(!data.pets) data.pets=[];
 if(!data.laundryRefs) data.laundryRefs=[];
 if(!data.schedules) data.schedules=[];
+if(!data.inventory) data.inventory=[];
 
 function seedAirPurifiers(){
   const presets=[
@@ -385,6 +386,8 @@ function seedMonthlySchedules(){
   localStorage.setItem(KEY,JSON.stringify(data));
 }
 seedMonthlySchedules();
+function seedInventory(){const rows=[["冰箱／冷凍庫", "肉類／雞肉", "土雞－去骨雞腿", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "土雞－腿排", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "土雞－雞骨頭", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "土雞－雞腳", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "土雞－雞胸肉", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "土雞－雞柳", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "肉雞－去骨雞腿", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "肉雞－腿排", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "肉雞－雞骨頭", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "肉雞－雞腳", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "肉雞－雞胸肉", "包"], ["冰箱／冷凍庫", "肉類／雞肉", "肉雞－雞柳", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "火鍋肉片", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "獅子頭絞肉", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "打拋豬絞肉", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "餛飩絞肉", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "一般絞肉", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "叉燒肉條", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "三層肉", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "五花肉（切塊）", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "梅花肉絲", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "雙色里肌肉片", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "豬腳肉", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "肝連", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "大骨", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "軟小排", "包"], ["冰箱／冷凍庫", "肉類／豬肉", "軟骨", "包"], ["冰箱／冷凍庫", "肉類／牛肉", "牛板腱", "包"], ["冰箱／冷凍庫", "肉類／牛肉", "牛邊腱", "包"], ["冰箱／冷凍庫", "肉類／牛肉", "牛小排", "包"], ["冰箱／冷凍庫", "肉類／牛肉", "大塊牛排", "包"], ["冰箱／冷凍庫", "肉類／牛肉", "雪花牛肉片", "包"], ["冰箱／冷凍庫", "肉類／牛肉", "牛肋條", "包"], ["冰箱／冷凍庫", "肉類／牛肉", "牛絞肉", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "鱈魚", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "鯖魚", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "土魠魚", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "鮭魚尾巴", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "魚下巴", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "透抽", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "大明蝦", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "大草蝦", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "胭脂蝦蝦仁", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "胭脂蝦米", "包"], ["冰箱／冷凍庫", "魚類／海鮮", "肉魚", "包"], ["冰箱／冷凍庫", "冷凍食品／火鍋料", "福州魚丸", "包"], ["冰箱／冷凍庫", "冷凍食品／火鍋料", "貢丸", "包"], ["冰箱／冷凍庫", "冷凍食品／火鍋料", "綜合火鍋料", "包"], ["冰箱／冷凍庫", "冷凍食品／火鍋料", "日本火鍋料", "包"], ["冰箱／冷凍庫", "冷凍食品／餅皮", "捲餅皮", "包"], ["冰箱／冷凍庫", "冷凍食品／餅皮", "口袋餅皮", "包"], ["冰箱／冷凍庫", "冷凍食品／餅皮", "蛋餅皮", "包"], ["冰箱／冷凍庫", "冷凍食品／水餃", "宏裕行水餃", "包"], ["冰箱／冷凍庫", "冷凍食品／水餃", "果貿吳家水餃", "包"], ["冰箱／冷凍庫", "冷藏醬料", "郫縣豆瓣醬", "罐"], ["冰箱／冷凍庫", "冷藏醬料", "不辣豆瓣醬", "罐"], ["冰箱／冷凍庫", "冷藏醬料", "北海道味噌", "罐"], ["冰箱／冷凍庫", "冷藏醬料", "白味噌", "罐"], ["冰箱／冷凍庫", "冷藏醬料", "紅咖哩", "罐"], ["冰箱／冷凍庫", "冷藏醬料", "破布子", "罐"], ["冰箱／冷凍庫", "冷藏醬料", "豆豉", "罐"], ["冰箱／冷凍庫", "冷藏醬料", "豆腐乳", "罐"], ["家庭常備", "主食", "米", "包"], ["家庭常備", "食用油／調味", "油", "包"], ["家庭常備", "食用油／調味", "醬油", "包"], ["家庭常備", "飲品／沖泡", "咖啡豆", "包"], ["家庭常備", "飲品／沖泡", "低音咖啡粉", "包"], ["家庭常備", "飲品／沖泡", "烏龍茶包", "包"], ["家庭常備", "飲品／沖泡", "紅茶包", "包"], ["家庭常備", "飲品／沖泡", "日本茶包", "包"], ["家庭常備", "飲品／沖泡", "紅茶葉", "包"], ["家庭常備", "調味／湯底", "高湯包", "包"], ["家庭常備", "寵物用品", "貓砂", "包"], ["家庭常備", "寵物用品", "浪貓飼料", "包"], ["家庭常備", "寵物用品", "家貓飼料", "包"], ["家庭常備", "清潔用品", "洗衣精", "包"], ["家庭常備", "清潔用品", "柔軟精", "包"], ["家庭常備", "清潔用品", "消毒水", "包"], ["家庭常備", "清潔用品", "漂白水", "包"], ["家庭常備", "清潔用品", "洗碗精", "包"], ["家庭常備", "清潔用品", "檸檬酸", "包"], ["家庭常備", "清潔用品", "過碳酸鈉", "包"], ["家庭常備", "清潔用品", "小蘇打粉", "包"], ["家庭常備", "清潔用品", "萬用清潔劑（除油）", "包"], ["家庭常備", "清潔用品", "馬桶清潔劑", "包"], ["家庭常備", "清潔用品", "浴廁清潔劑", "包"], ["家庭常備", "清潔用品", "多功能清潔劑（日用）", "包"], ["家庭常備", "清潔用品", "三合一（去汙除臭）", "包"], ["家庭常備", "乾貨／調味", "地瓜粉", "包"], ["家庭常備", "乾貨／調味", "太白粉", "包"], ["家庭常備", "乾貨／調味", "高筋麵粉", "包"], ["家庭常備", "乾貨／調味", "中筋麵粉", "包"], ["家庭常備", "乾貨／調味", "低筋麵粉", "包"], ["家庭常備", "乾貨／調味", "冰糖", "包"], ["家庭常備", "乾貨／調味", "二砂糖", "包"], ["家庭常備", "乾貨／調味", "細砂糖", "包"], ["家庭常備", "乾貨／調味", "味素", "包"], ["家庭常備", "乾貨／調味", "鹽", "包"], ["家庭常備", "乾貨／調味", "麵包粉", "包"], ["家庭常備", "乾貨／調味", "黑胡椒", "包"], ["家庭常備", "乾貨／調味", "白胡椒", "包"], ["家庭常備", "乾貨／調味", "烤肉醬", "包"], ["家庭常備", "罐頭／料理材料", "條瓜", "包"], ["家庭常備", "罐頭／料理材料", "鮪魚罐頭", "包"], ["家庭常備", "罐頭／料理材料", "番茄魚罐頭", "包"], ["家庭常備", "罐頭／料理材料", "麵筋花生", "包"], ["家庭常備", "罐頭／料理材料", "椰奶", "包"], ["家庭常備", "罐頭／料理材料", "咖哩塊", "包"], ["家庭常備", "料理材料／藥膳", "長高藥", "包"], ["家庭常備", "料理材料／藥膳", "肉骨茶", "包"]];for(const [area,category,name,unit] of rows)if(!data.inventory.some(x=>x.name===name&&x.category===category))data.inventory.push({id:id(),area,category,name,qty:0,unit,minQty:0,location:area==='冰箱／冷凍庫'?'冷凍庫':'家中',purchaseDate:'',expiryDate:'',openedDate:'',note:''});localStorage.setItem(KEY,JSON.stringify(data));}
+seedInventory();
 function loadData(){
   let raw=localStorage.getItem(KEY);
   if(raw) return JSON.parse(raw);
@@ -399,14 +402,14 @@ function loadData(){
           shopping:o.shopping || o.b || [],
           items:o.items || o.i || [],
           pets:o.pets || [],
-          laundryRefs:o.laundryRefs || [], schedules:o.schedules || []
+          laundryRefs:o.laundryRefs || [], schedules:o.schedules || [], inventory:o.inventory || []
         };
         localStorage.setItem(KEY,JSON.stringify(migrated));
         return migrated;
       }catch(e){}
     }
   }
-  return {chores:[],supplies:[],shopping:[],items:[],pets:[],laundryRefs:[],schedules:[]};
+  return {chores:[],supplies:[],shopping:[],items:[],pets:[],laundryRefs:[],schedules:[],inventory:[]};
 }
 function persist(){localStorage.setItem(KEY,JSON.stringify(data));render()}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -424,6 +427,13 @@ document.querySelectorAll('nav button').forEach(b=>{
     b.classList.add('active');
   })
 });
+
+let invFilter='全部';
+function setInvFilter(v){invFilter=v;render();}
+function invLow(x){return Number(x.minQty)>0&&Number(x.qty)<=Number(x.minQty);}
+function invExpiring(x){if(!x.expiryDate)return false;let d=(new Date(x.expiryDate+'T12:00')-new Date(today()+'T12:00'))/86400000;return d>=0&&d<=3;}
+function changeQty(i,d){let x=data.inventory.find(v=>v.id===i);if(x){x.qty=Math.max(0,Number(x.qty||0)+d);persist();}}
+function addInventoryToShopping(i){let x=data.inventory.find(v=>v.id===i);if(x&&!data.shopping.some(s=>!s.done&&s.name===x.name))data.shopping.push({id:id(),name:x.name,qty:'1 '+x.unit,done:false,note:'庫存不足'});persist();}
 
 function render(){
   const dueCh=data.chores.filter(x=>x.next && x.next<=today());
@@ -550,6 +560,7 @@ function render(){
         <button class="btn danger" onclick="deleteItem('schedules','${x.id}')">刪除</button>
       </div>
     </div>`).join('') || '<div class="empty">目前沒有行程</div>';
+  let iv=data.inventory.slice();if(invFilter==='冰箱／冷凍庫'||invFilter==='家庭常備')iv=iv.filter(x=>x.area===invFilter);if(invFilter==='庫存不足')iv=iv.filter(invLow);if(invFilter==='即將過期')iv=iv.filter(invExpiring);let gs={};iv.forEach(x=>(gs[x.area+'｜'+x.category]??=[]).push(x));inventoryList.innerHTML=Object.keys(gs).sort().map(k=>`<div class="category-title">${esc(k)}</div><div class="panel">`+gs[k].map(x=>`<div class="item"><div class="item-title">${esc(x.name)} ${invLow(x)?'<span class="badge due">庫存不足</span>':''}${invExpiring(x)?'<span class="badge soon">即將過期</span>':''}</div><div class="meta">位置：${esc(x.location)}・安全庫存：${x.minQty||0} ${esc(x.unit)}${x.expiryDate?'<br>有效期限：'+x.expiryDate:''}${x.openedDate?'<br>開封日期：'+x.openedDate:''}</div><div class="qtybox"><button class="btn soft" onclick="changeQty('${x.id}',-1)">－</button><span class="qtynum">${x.qty||0}</span><span>${esc(x.unit)}</span><button class="btn soft" onclick="changeQty('${x.id}',1)">＋</button></div><div class="actions" style="margin-top:8px"><button class="btn soft" onclick="editItem('inventory','${x.id}')">編輯</button><button class="btn primary" onclick="addInventoryToShopping('${x.id}')">加入採購</button></div></div>`).join('')+'</div>').join('')||'<div class="empty">目前沒有庫存資料</div>';
 
 }
 
@@ -601,7 +612,7 @@ function openForm(type){
 }
 function editItem(type,itemId){
   currentType=type; editingId=itemId;
-  const map={chore:'chores',supply:'supplies',shopping:'shopping',item:'items',pet:'pets',laundryRef:'laundryRefs',schedule:'schedules'};
+  const map={chore:'chores',supply:'supplies',shopping:'shopping',item:'items',pet:'pets',laundryRef:'laundryRefs',schedule:'schedules',inventory:'inventory'};
   const x=data[map[type]].find(v=>v.id===itemId);
   fillForm(type,x||{});
 }
@@ -678,6 +689,7 @@ function fillForm(type,x){
       unitSelect(x.cycleUnit||'month')+
       '</div><label>備註</label><textarea name="note">'+esc(x.note||'')+'</textarea>';
   }
+  if(type==='inventory'){formTitle.textContent=editingId?'編輯庫存':'新增庫存';fields.innerHTML=input('品名','name','text',x.name||'')+input('區域','area','text',x.area||'家庭常備')+input('分類','category','text',x.category||'其他')+'<div class="form-grid">'+input('目前數量','qty','number',x.qty||0)+input('單位','unit','text',x.unit||'包')+input('最低安全庫存','minQty','number',x.minQty||0)+input('存放位置','location','text',x.location||'')+input('購買日期','purchaseDate','date',x.purchaseDate||'')+input('有效期限','expiryDate','date',x.expiryDate||'')+input('開封日期','openedDate','date',x.openedDate||'')+'</div><label>備註</label><textarea name="note">'+esc(x.note||'')+'</textarea>';}
   if(type==='laundryRef'){
     formTitle.textContent=editingId?'編輯洗衣用量':'新增洗衣用量';
     fields.innerHTML=
@@ -716,7 +728,7 @@ function applyScheduleQuick(){
 function saveForm(){
   const q={};
   fields.querySelectorAll('input,textarea,select').forEach(el=>q[el.name]=el.value);
-  const map={chore:'chores',supply:'supplies',shopping:'shopping',item:'items',pet:'pets',laundryRef:'laundryRefs',schedule:'schedules'};
+  const map={chore:'chores',supply:'supplies',shopping:'shopping',item:'items',pet:'pets',laundryRef:'laundryRefs',schedule:'schedules',inventory:'inventory'};
   const arr=data[map[currentType]];
   let x=editingId ? arr.find(v=>v.id===editingId) : null;
   if(!x){x={id:id()};arr.push(x)}
@@ -750,6 +762,7 @@ function saveForm(){
     x.cycleValue=Number(q.cycleValue||1);x.cycleUnit=q.cycleUnit||'month';
     x.next=q.next||calcNext(x.last,x.cycleValue,x.cycleUnit);x.note=q.note||'';
   }
+  if(currentType==='inventory'){x.name=q.name.trim();x.area=q.area.trim();x.category=q.category.trim();x.qty=Number(q.qty||0);x.unit=q.unit.trim()||'包';x.minQty=Number(q.minQty||0);x.location=q.location||'';x.purchaseDate=q.purchaseDate||'';x.expiryDate=q.expiryDate||'';x.openedDate=q.openedDate||'';x.note=q.note||'';}
   if(currentType==='laundryRef'){
     x.name=q.name.trim(); x.brand=q.brand.trim(); x.kind=q.kind.trim(); x.water=Number(q.water||30); x.ml=Number(q.ml||0); x.source=q.source.trim()||'自訂';
   }
@@ -758,7 +771,7 @@ function saveForm(){
 render();
 
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js?v=15').then(reg=>reg.update()).catch(()=>{});
+  navigator.serviceWorker.register('./sw.js?v=16').then(reg=>reg.update()).catch(()=>{});
 }
 </script>
 </body>
