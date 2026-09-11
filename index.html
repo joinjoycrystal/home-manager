@@ -63,6 +63,14 @@ button{
 .eventcheck{width:22px;height:22px;margin-top:2px}
 .synced{font-size:12px;color:#157347;font-weight:700}
 .unsynced{font-size:12px;color:#a66b00;font-weight:700}.inv-controls{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 14px}.qtybox{display:flex;align-items:center;gap:8px;margin-top:8px}.qtynum{min-width:48px;text-align:center;font-size:20px;font-weight:800}.category-title{font-size:18px;font-weight:850;margin:18px 2px 8px}
+.inv-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:10px 0 14px}
+.inv-stat{background:#fff;border-radius:16px;padding:14px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+.inv-stat .num{font-size:28px;font-weight:850;margin-top:3px}
+.inv-stat .lab{font-size:13px;color:var(--muted)}
+.inv-table{width:100%;border-collapse:collapse;font-size:13px}
+.inv-table th,.inv-table td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.inv-table th{color:var(--muted);font-weight:700}
+@media (min-width:700px){.inv-summary{grid-template-columns:repeat(4,1fr)}}
 
 .btn.google:active{transform:translateY(1px)}
 .btn.soft{background:#eef0f3;color:#222}
@@ -106,7 +114,7 @@ textarea{min-height:84px;resize:vertical}
 <body>
 <header>
   <div class="brand">家務管家</div>
-  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v1.6</span></div>
+  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v1.7</span></div>
 </header>
 
 <main>
@@ -170,7 +178,31 @@ textarea{min-height:84px;resize:vertical}
   <div class="section-head"><h2>行程</h2><button class="btn primary" onclick="openForm('schedule')">＋ 新增</button></div>
   <div class="panel" id="scheduleList"></div>
 </section>
-<section id="inventory"><div class="section-head"><h2>冰箱＋家庭庫存</h2><button class="btn primary" onclick="openForm('inventory')">＋ 新增</button></div><div class="inv-controls"><button class="btn soft" onclick="setInvFilter('全部')">全部</button><button class="btn soft" onclick="setInvFilter('冰箱／冷凍庫')">冰箱／冷凍庫</button><button class="btn soft" onclick="setInvFilter('家庭常備')">家庭常備</button><button class="btn soft" onclick="setInvFilter('庫存不足')">庫存不足</button><button class="btn soft" onclick="setInvFilter('即將過期')">即將過期</button></div><div id="inventoryList"></div></section></main>
+<section id="inventory">
+  <div class="section-head"><h2>冰箱＋家庭庫存</h2><button class="btn primary" onclick="openForm('inventory')">＋ 新增</button></div>
+  <div class="inv-summary">
+    <div class="inv-stat"><div class="lab">總品項數</div><div class="num" id="invSkuCount">0</div></div>
+    <div class="inv-stat"><div class="lab">有庫存品項</div><div class="num" id="invInStockCount">0</div></div>
+    <div class="inv-stat"><div class="lab">缺貨品項</div><div class="num" id="invOutStockCount">0</div></div>
+    <div class="inv-stat"><div class="lab">庫存不足</div><div class="num" id="invLowCount">0</div></div>
+    <div class="inv-stat"><div class="lab">3天內到期</div><div class="num" id="invExpireCount">0</div></div>
+    <div class="inv-stat"><div class="lab">冰箱／冷凍庫品項</div><div class="num" id="invFridgeCount">0</div></div>
+    <div class="inv-stat"><div class="lab">家庭常備品項</div><div class="num" id="invHomeCount">0</div></div>
+    <div class="inv-stat"><div class="lab">已設定安全庫存</div><div class="num" id="invMinSetCount">0</div></div>
+  </div>
+  <div class="section-head"><h3>分類統計</h3></div>
+  <div class="panel" style="overflow:auto">
+    <table class="inv-table"><thead><tr><th>區域／分類</th><th>品項數</th><th>實際庫存合計</th><th>不足</th></tr></thead><tbody id="inventoryStatsBody"></tbody></table>
+  </div>
+  <div class="inv-controls">
+    <button class="btn soft" onclick="setInvFilter('全部')">全部</button>
+    <button class="btn soft" onclick="setInvFilter('冰箱／冷凍庫')">冰箱／冷凍庫</button>
+    <button class="btn soft" onclick="setInvFilter('家庭常備')">家庭常備</button>
+    <button class="btn soft" onclick="setInvFilter('庫存不足')">庫存不足</button>
+    <button class="btn soft" onclick="setInvFilter('即將過期')">即將過期</button>
+  </div>
+  <div id="inventoryList"></div>
+</section></main>
 
 <nav>
   <button class="active" data-tab="home">首頁</button>
@@ -192,8 +224,8 @@ textarea{min-height:84px;resize:vertical}
 </dialog>
 
 <script>
-const KEY='homeManagerDataV16';
-const OLD_KEYS=['homeManagerDataV15','homeManagerDataV14','homeManagerDataV13','homeManagerDataV12','homeManagerDataV11','homeManagerDataV10','homeManagerDataV09','homeManagerDataV08','homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
+const KEY='homeManagerDataV17';
+const OLD_KEYS=['homeManagerDataV16','homeManagerDataV15','homeManagerDataV14','homeManagerDataV13','homeManagerDataV12','homeManagerDataV11','homeManagerDataV10','homeManagerDataV09','homeManagerDataV08','homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
 const today=()=>new Date().toISOString().slice(0,10);
 const addDays=(date,days)=>{
   const d=new Date(date+'T12:00:00');
@@ -434,6 +466,10 @@ function invLow(x){return Number(x.minQty)>0&&Number(x.qty)<=Number(x.minQty);}
 function invExpiring(x){if(!x.expiryDate)return false;let d=(new Date(x.expiryDate+'T12:00')-new Date(today()+'T12:00'))/86400000;return d>=0&&d<=3;}
 function changeQty(i,d){let x=data.inventory.find(v=>v.id===i);if(x){x.qty=Math.max(0,Number(x.qty||0)+d);persist();}}
 function addInventoryToShopping(i){let x=data.inventory.find(v=>v.id===i);if(x&&!data.shopping.some(s=>!s.done&&s.name===x.name))data.shopping.push({id:id(),name:x.name,qty:'1 '+x.unit,done:false,note:'庫存不足'});persist();}
+function inventorySummary(){const a=data.inventory||[];return {sku:a.length,inStock:a.filter(x=>Number(x.qty)>0).length,outStock:a.filter(x=>Number(x.qty)<=0).length,low:a.filter(invLow).length,exp:a.filter(invExpiring).length,fridge:a.filter(x=>x.area==='冰箱／冷凍庫').length,home:a.filter(x=>x.area==='家庭常備').length,minSet:a.filter(x=>Number(x.minQty)>0).length};}
+function qtyByUnit(list){const s={};for(const x of list){const u=x.unit||'個';s[u]=(s[u]||0)+Number(x.qty||0)}return Object.entries(s).filter(([u,v])=>v!==0).map(([u,v])=>v+' '+u).join('、')||'0';}
+function inventoryCategoryStats(){const g={};for(const x of data.inventory||[]){const k=(x.area||'未分類')+'｜'+(x.category||'其他');(g[k]??=[]).push(x)}return Object.entries(g).sort((a,b)=>a[0].localeCompare(b[0],'zh-Hant')).map(([key,list])=>({key,count:list.length,qty:qtyByUnit(list),low:list.filter(invLow).length}));}
+
 
 function render(){
   const dueCh=data.chores.filter(x=>x.next && x.next<=today());
@@ -560,7 +596,10 @@ function render(){
         <button class="btn danger" onclick="deleteItem('schedules','${x.id}')">刪除</button>
       </div>
     </div>`).join('') || '<div class="empty">目前沒有行程</div>';
-  let iv=data.inventory.slice();if(invFilter==='冰箱／冷凍庫'||invFilter==='家庭常備')iv=iv.filter(x=>x.area===invFilter);if(invFilter==='庫存不足')iv=iv.filter(invLow);if(invFilter==='即將過期')iv=iv.filter(invExpiring);let gs={};iv.forEach(x=>(gs[x.area+'｜'+x.category]??=[]).push(x));inventoryList.innerHTML=Object.keys(gs).sort().map(k=>`<div class="category-title">${esc(k)}</div><div class="panel">`+gs[k].map(x=>`<div class="item"><div class="item-title">${esc(x.name)} ${invLow(x)?'<span class="badge due">庫存不足</span>':''}${invExpiring(x)?'<span class="badge soon">即將過期</span>':''}</div><div class="meta">位置：${esc(x.location)}・安全庫存：${x.minQty||0} ${esc(x.unit)}${x.expiryDate?'<br>有效期限：'+x.expiryDate:''}${x.openedDate?'<br>開封日期：'+x.openedDate:''}</div><div class="qtybox"><button class="btn soft" onclick="changeQty('${x.id}',-1)">－</button><span class="qtynum">${x.qty||0}</span><span>${esc(x.unit)}</span><button class="btn soft" onclick="changeQty('${x.id}',1)">＋</button></div><div class="actions" style="margin-top:8px"><button class="btn soft" onclick="editItem('inventory','${x.id}')">編輯</button><button class="btn primary" onclick="addInventoryToShopping('${x.id}')">加入採購</button></div></div>`).join('')+'</div>').join('')||'<div class="empty">目前沒有庫存資料</div>';
+  const isum=inventorySummary();
+  invSkuCount.textContent=isum.sku;invInStockCount.textContent=isum.inStock;invOutStockCount.textContent=isum.outStock;invLowCount.textContent=isum.low;invExpireCount.textContent=isum.exp;invFridgeCount.textContent=isum.fridge;invHomeCount.textContent=isum.home;invMinSetCount.textContent=isum.minSet;
+  inventoryStatsBody.innerHTML=inventoryCategoryStats().map(s=>`<tr><td>${esc(s.key)}</td><td>${s.count}</td><td>${esc(s.qty)}</td><td>${s.low?'<span class="low">'+s.low+'</span>':'0'}</td></tr>`).join('');
+  let iv=data.inventory.slice();if(invFilter==='冰箱／冷凍庫'||invFilter==='家庭常備')iv=iv.filter(x=>x.area===invFilter);if(invFilter==='庫存不足')iv=iv.filter(invLow);if(invFilter==='即將過期')iv=iv.filter(invExpiring);let gs={};iv.forEach(x=>(gs[x.area+'｜'+x.category]??=[]).push(x));inventoryList.innerHTML=Object.keys(gs).sort().map(k=>`<div class="category-title">${esc(k)}</div><div class="panel">`+gs[k].map(x=>`<div class="item"><div class="item-title">${esc(x.name)} ${Number(x.qty)<=0?'<span class="badge due">缺貨</span>':''}${invLow(x)?'<span class="badge due">庫存不足</span>':''}${invExpiring(x)?'<span class="badge soon">即將過期</span>':''}</div><div class="meta">位置：${esc(x.location)}・安全庫存：${x.minQty||0} ${esc(x.unit)}${x.expiryDate?'<br>有效期限：'+x.expiryDate:''}${x.openedDate?'<br>開封日期：'+x.openedDate:''}</div><div class="qtybox"><button class="btn soft" onclick="changeQty('${x.id}',-1)">－</button><span class="qtynum">${x.qty||0}</span><span>${esc(x.unit)}</span><button class="btn soft" onclick="changeQty('${x.id}',1)">＋</button></div><div class="actions" style="margin-top:8px"><button class="btn soft" onclick="editItem('inventory','${x.id}')">編輯</button><button class="btn primary" onclick="addInventoryToShopping('${x.id}')">加入採購</button></div></div>`).join('')+'</div>').join('')||'<div class="empty">目前沒有庫存資料</div>';
 
 }
 
@@ -771,7 +810,7 @@ function saveForm(){
 render();
 
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js?v=16').then(reg=>reg.update()).catch(()=>{});
+  navigator.serviceWorker.register('./sw.js?v=17').then(reg=>reg.update()).catch(()=>{});
 }
 </script>
 </body>
