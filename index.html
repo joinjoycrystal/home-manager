@@ -117,7 +117,7 @@ textarea{min-height:84px;resize:vertical}
 <body>
 <header>
   <div class="brand">家務管家</div>
-  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v1.8</span></div>
+  <div class="subtitle">家事・耗材・採購・物品資料・寵物　<span style="font-weight:800">v1.9</span></div>
 </header>
 
 <main>
@@ -182,7 +182,7 @@ textarea{min-height:84px;resize:vertical}
   <div class="panel" id="scheduleList"></div>
 </section>
 <section id="inventory">
-  <div class="section-head"><h2>冰箱＋家庭庫存</h2><button class="btn primary" onclick="openForm('inventory')">＋ 新增</button></div>
+  <div class="section-head"><h2>冰箱＋家庭庫存</h2><div class="actions"><button class="btn soft" onclick="toggleInactiveInventory()">停用品項</button><button class="btn primary" onclick="openInventoryAdd()">＋ 新增品項</button></div></div>
   <div class="inv-summary">
     <div class="inv-stat"><div class="lab">總品項數</div><div class="num" id="invSkuCount">0</div></div>
     <div class="inv-stat"><div class="lab">有庫存品項</div><div class="num" id="invInStockCount">0</div></div>
@@ -227,8 +227,8 @@ textarea{min-height:84px;resize:vertical}
 </dialog>
 
 <script>
-const KEY='homeManagerDataV18';
-const OLD_KEYS=['homeManagerDataV17','homeManagerDataV16','homeManagerDataV15','homeManagerDataV14','homeManagerDataV13','homeManagerDataV12','homeManagerDataV11','homeManagerDataV10','homeManagerDataV09','homeManagerDataV08','homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
+const KEY='homeManagerDataV19';
+const OLD_KEYS=['homeManagerDataV18','homeManagerDataV17','homeManagerDataV16','homeManagerDataV15','homeManagerDataV14','homeManagerDataV13','homeManagerDataV12','homeManagerDataV11','homeManagerDataV10','homeManagerDataV09','homeManagerDataV08','homeManagerDataV07','homeManagerDataV06','homeManagerDataV05','homeManagerDataV04','homeManagerDataV03','homeManagerDataV02','hm02'];
 const today=()=>new Date().toISOString().slice(0,10);
 const addDays=(date,days)=>{
   const d=new Date(date+'T12:00:00');
@@ -340,7 +340,7 @@ for(const x of data.schedules||[]) if(!x.time) x.time='09:00';
 if(!data.pets) data.pets=[];
 if(!data.laundryRefs) data.laundryRefs=[];
 if(!data.schedules) data.schedules=[];
-if(!data.inventory) data.inventory=[];
+if(!data.inventory) data.inventory=[];for(const x of data.inventory)if(typeof x.active!=='boolean')x.active=true;
 
 function seedAirPurifiers(){
   const presets=[
@@ -475,7 +475,15 @@ function draftQty(id,q){return Object.prototype.hasOwnProperty.call(invDraft,id)
 function setDraftQty(id,v){invDraft[id]=Math.max(0,Number(v||0));}
 function stepDraftQty(id,q,d){invDraft[id]=Math.max(0,draftQty(id,q)+d);render();}
 function confirmInventoryQty(id){let x=data.inventory.find(v=>v.id===id);if(!x)return;x.qty=draftQty(id,x.qty);x.lastCountedAt=new Date().toISOString();delete invDraft[id];persist();}
-function inventorySummary(){const a=data.inventory||[];return {sku:a.length,inStock:a.filter(x=>Number(x.qty)>0).length,outStock:a.filter(x=>Number(x.qty)<=0).length,low:a.filter(invLow).length,exp:a.filter(invExpiring).length,fridge:a.filter(x=>x.area==='冰箱／冷凍庫').length,home:a.filter(x=>x.area==='家庭常備').length,minSet:a.filter(x=>Number(x.minQty)>0).length};}
+let showInactiveInventory=false;
+function toggleInactiveInventory(){showInactiveInventory=!showInactiveInventory;render();}
+function categoriesForArea(a){let b={'冰箱／冷凍庫':['肉類／雞肉','肉類／豬肉','肉類／牛肉','魚類／海鮮','冷凍食品／火鍋料','冷凍食品／餅皮','冷凍食品／水餃','冷藏醬料','其他'],'家庭常備':['主食','食用油／調味','飲品／沖泡','調味／湯底','寵物用品','清潔用品','乾貨／調味','罐頭／料理材料','料理材料／藥膳','其他']};let e=[...new Set(data.inventory.filter(x=>x.area===a).map(x=>x.category))];return [...new Set([...(b[a]||['其他']),...e])];}
+function areaSelect(v='冰箱／冷凍庫'){return `<label>區域</label><select name="area" id="inventoryArea" onchange="refreshInventoryCategory()"><option value="冰箱／冷凍庫" ${v==='冰箱／冷凍庫'?'selected':''}>冰箱／冷凍庫</option><option value="家庭常備" ${v==='家庭常備'?'selected':''}>家庭常備</option></select>`;}
+function categorySelect(a,v=''){return `<label>分類</label><select name="category" id="inventoryCategory">${categoriesForArea(a).map(x=>`<option value="${x}" ${x===v?'selected':''}>${x}</option>`).join('')}</select>`;}
+function refreshInventoryCategory(){let a=document.getElementById('inventoryArea')?.value||'冰箱／冷凍庫',o=document.getElementById('inventoryCategory')?.value||'',z=document.getElementById('inventoryCategoryHolder');if(z)z.innerHTML=categorySelect(a,o);}
+function openInventoryAdd(a='冰箱／冷凍庫',c=''){currentType='inventory';editingId=null;formTitle.textContent='新增庫存品項';fields.innerHTML=areaSelect(a)+`<div id="inventoryCategoryHolder">${categorySelect(a,c)}</div>`+input('品項名稱','name','text','')+'<div class="form-grid">'+input('目前庫存','qty','number',0)+input('單位','unit','text','包')+input('最低安全庫存','minQty','number',0)+input('存放位置','location','text',a==='冰箱／冷凍庫'?'冷凍庫':'家中')+input('購買日期','purchaseDate','date','')+input('有效期限','expiryDate','date','')+input('開封日期','openedDate','date','')+'</div><label>備註</label><textarea name="note"></textarea>';editor.showModal();}
+function setInventoryActive(i,a){let x=data.inventory.find(v=>v.id===i);if(x){x.active=a;persist();}}
+function inventorySummary(){const a=(data.inventory||[]).filter(x=>x.active!==false);return {sku:a.length,inStock:a.filter(x=>Number(x.qty)>0).length,outStock:a.filter(x=>Number(x.qty)<=0).length,low:a.filter(invLow).length,exp:a.filter(invExpiring).length,fridge:a.filter(x=>x.area==='冰箱／冷凍庫').length,home:a.filter(x=>x.area==='家庭常備').length,minSet:a.filter(x=>Number(x.minQty)>0).length};}
 function qtyByUnit(list){const s={};for(const x of list){const u=x.unit||'個';s[u]=(s[u]||0)+Number(x.qty||0)}return Object.entries(s).filter(([u,v])=>v!==0).map(([u,v])=>v+' '+u).join('、')||'0';}
 function inventoryCategoryStats(){const g={};for(const x of data.inventory||[]){const k=(x.area||'未分類')+'｜'+(x.category||'其他');(g[k]??=[]).push(x)}return Object.entries(g).sort((a,b)=>a[0].localeCompare(b[0],'zh-Hant')).map(([key,list])=>({key,count:list.length,qty:qtyByUnit(list),low:list.filter(invLow).length}));}
 
@@ -607,14 +615,14 @@ function render(){
     </div>`).join('') || '<div class="empty">目前沒有行程</div>';
   const isum=inventorySummary();
   invSkuCount.textContent=isum.sku;invInStockCount.textContent=isum.inStock;invOutStockCount.textContent=isum.outStock;invLowCount.textContent=isum.low;invExpireCount.textContent=isum.exp;invFridgeCount.textContent=isum.fridge;invHomeCount.textContent=isum.home;invMinSetCount.textContent=isum.minSet;
-  let iv=data.inventory.slice();
+  let iv=data.inventory.filter(x=>showInactiveInventory?x.active===false:x.active!==false);
   if(invFilter==='冰箱／冷凍庫'||invFilter==='家庭常備')iv=iv.filter(x=>x.area===invFilter);
   if(invFilter==='庫存不足')iv=iv.filter(invLow);
   if(invFilter==='即將過期')iv=iv.filter(invExpiring);
   const groups={};iv.forEach(x=>{let k=x.area+'｜'+x.category;(groups[k]??=[]).push(x)});
   inventoryList.innerHTML=Object.keys(groups).sort().map(k=>{
     const list=groups[k],opened=openInvGroups.has(k),instock=list.filter(x=>Number(x.qty)>0).length,out=list.length-instock,low=list.filter(invLow).length;
-    return `<div class="inv-group"><button class="inv-group-head" onclick="toggleInvGroup(decodeURIComponent('${encodeURIComponent(k)}'))"><span>${opened?'▾':'▸'} ${esc(k)}</span><span>${list.length}種｜有貨${instock}｜缺貨${out}${low?'｜不足'+low:''}</span></button>${opened?`<div class="inv-group-body"><div class="meta">分類實際庫存：${esc(qtyByUnit(list))}</div>${list.map(x=>{let q=draftQty(x.id,x.qty),dirty=Object.prototype.hasOwnProperty.call(invDraft,x.id)&&Number(q)!==Number(x.qty||0);return `<div class="item"><div class="item-title">${esc(x.name)} ${Number(x.qty)<=0?'<span class="badge due">缺貨</span>':''}${invLow(x)?'<span class="badge due">庫存不足</span>':''}</div><div class="meta">正式庫存：<b>${x.qty||0} ${esc(x.unit)}</b>・安全庫存：${x.minQty||0} ${esc(x.unit)}${x.lastCountedAt?'<br>最後盤點：'+new Date(x.lastCountedAt).toLocaleString('zh-TW'):''}</div><div class="count-entry"><button class="btn soft" onclick="stepDraftQty('${x.id}',${Number(x.qty||0)},-1)">－</button><input class="count-input" type="number" min="0" value="${q}" onchange="setDraftQty('${x.id}',this.value)"><span>${esc(x.unit)}</span><button class="btn soft" onclick="stepDraftQty('${x.id}',${Number(x.qty||0)},1)">＋</button><button class="btn primary" onclick="confirmInventoryQty('${x.id}')">確定輸入</button><span class="${dirty?'pending':'confirmed'}">${dirty?'尚未確認':'已確認'}</span></div><div class="actions"><button class="btn soft" onclick="editItem('inventory','${x.id}')">編輯</button><button class="btn primary" onclick="addInventoryToShopping('${x.id}')">加入採購</button></div></div>`}).join('')}</div>`:''}</div>`
+    return `<div class="inv-group"><button class="inv-group-head" onclick="toggleInvGroup(decodeURIComponent('${encodeURIComponent(k)}'))"><span>${opened?'▾':'▸'} ${esc(k)}</span><span>${list.length}種｜有貨${instock}｜缺貨${out}${low?'｜不足'+low:''}</span></button>${opened?`<div class="inv-group-body"><button class="btn primary" onclick="openInventoryAdd(decodeURIComponent('${encodeURIComponent(k.split('｜')[0])}'),decodeURIComponent('${encodeURIComponent(k.split('｜').slice(1).join('｜'))}'))">＋ 此分類新增</button><div class="meta" style="margin-top:8px">分類實際庫存：${esc(qtyByUnit(list))}</div>${list.map(x=>{let q=draftQty(x.id,x.qty),dirty=Object.prototype.hasOwnProperty.call(invDraft,x.id)&&Number(q)!==Number(x.qty||0);return `<div class="item"><div class="item-title">${esc(x.name)} ${Number(x.qty)<=0?'<span class="badge due">缺貨</span>':''}${invLow(x)?'<span class="badge due">庫存不足</span>':''}</div><div class="meta">正式庫存：<b>${x.qty||0} ${esc(x.unit)}</b>・安全庫存：${x.minQty||0} ${esc(x.unit)}${x.lastCountedAt?'<br>最後盤點：'+new Date(x.lastCountedAt).toLocaleString('zh-TW'):''}</div><div class="count-entry"><button class="btn soft" onclick="stepDraftQty('${x.id}',${Number(x.qty||0)},-1)">－</button><input class="count-input" type="number" min="0" value="${q}" onchange="setDraftQty('${x.id}',this.value)"><span>${esc(x.unit)}</span><button class="btn soft" onclick="stepDraftQty('${x.id}',${Number(x.qty||0)},1)">＋</button><button class="btn primary" onclick="confirmInventoryQty('${x.id}')">確定輸入</button><span class="${dirty?'pending':'confirmed'}">${dirty?'尚未確認':'已確認'}</span></div><div class="actions"><button class="btn soft" onclick="editItem('inventory','${x.id}')">編輯</button>${x.active===false?`<button class="btn primary" onclick="setInventoryActive('${x.id}',true)">重新啟用</button>`:`<button class="btn primary" onclick="addInventoryToShopping('${x.id}')">加入採購</button><button class="btn danger" onclick="setInventoryActive('${x.id}',false)">停用</button>`}</div></div>`}).join('')}</div>`:''}</div>`
   }).join('')||'<div class="empty">目前沒有庫存資料</div>';
 }
 
@@ -743,8 +751,8 @@ function fillForm(type,x){
       unitSelect(x.cycleUnit||'month')+
       '</div><label>備註</label><textarea name="note">'+esc(x.note||'')+'</textarea>';
   }
-  if(type==='inventory'){formTitle.textContent=editingId?'編輯庫存':'新增庫存';fields.innerHTML=input('品名','name','text',x.name||'')+input('區域','area','text',x.area||'家庭常備')+input('分類','category','text',x.category||'其他')+'<div class="form-grid">'+input('目前數量','qty','number',x.qty||0)+input('單位','unit','text',x.unit||'包')+input('最低安全庫存','minQty','number',x.minQty||0)+input('存放位置','location','text',x.location||'')+input('購買日期','purchaseDate','date',x.purchaseDate||'')+input('有效期限','expiryDate','date',x.expiryDate||'')+input('開封日期','openedDate','date',x.openedDate||'')+'</div><label>備註</label><textarea name="note">'+esc(x.note||'')+'</textarea>';}
-  if(type==='laundryRef'){
+  if(type==='inventory'){formTitle.textContent=editingId?'編輯庫存':'新增庫存';fields.innerHTML=areaSelect(x.area||'家庭常備')+`<div id="inventoryCategoryHolder">${categorySelect(x.area||'家庭常備',x.category||'')}</div>`+input('品名','name','text',x.name||'')+'<div class="form-grid">'+input('目前數量','qty','number',x.qty||0)+input('單位','unit','text',x.unit||'包')+input('最低安全庫存','minQty','number',x.minQty||0)+input('存放位置','location','text',x.location||'')+input('購買日期','purchaseDate','date',x.purchaseDate||'')+input('有效期限','expiryDate','date',x.expiryDate||'')+input('開封日期','openedDate','date',x.openedDate||'')+'</div><label>備註</label><textarea name="note">'+esc(x.note||'')+'</textarea>';}
+  if(type==='laundryRef'{
     formTitle.textContent=editingId?'編輯洗衣用量':'新增洗衣用量';
     fields.innerHTML=
       input('品名','name','text',x.name||'')+
@@ -816,7 +824,7 @@ function saveForm(){
     x.cycleValue=Number(q.cycleValue||1);x.cycleUnit=q.cycleUnit||'month';
     x.next=q.next||calcNext(x.last,x.cycleValue,x.cycleUnit);x.note=q.note||'';
   }
-  if(currentType==='inventory'){x.name=q.name.trim();x.area=q.area.trim();x.category=q.category.trim();x.qty=Number(q.qty||0);x.unit=q.unit.trim()||'包';x.minQty=Number(q.minQty||0);x.location=q.location||'';x.purchaseDate=q.purchaseDate||'';x.expiryDate=q.expiryDate||'';x.openedDate=q.openedDate||'';x.note=q.note||'';}
+  if(currentType==='inventory'){x.name=q.name.trim();if(typeof x.active!=='boolean')x.active=true;x.area=q.area.trim();x.category=q.category.trim();x.qty=Number(q.qty||0);x.unit=q.unit.trim()||'包';x.minQty=Number(q.minQty||0);x.location=q.location||'';x.purchaseDate=q.purchaseDate||'';x.expiryDate=q.expiryDate||'';x.openedDate=q.openedDate||'';x.note=q.note||'';}
   if(currentType==='laundryRef'){
     x.name=q.name.trim(); x.brand=q.brand.trim(); x.kind=q.kind.trim(); x.water=Number(q.water||30); x.ml=Number(q.ml||0); x.source=q.source.trim()||'自訂';
   }
@@ -825,7 +833,7 @@ function saveForm(){
 render();
 
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js?v=18').then(reg=>reg.update()).catch(()=>{});
+  navigator.serviceWorker.register('./sw.js?v=19').then(reg=>reg.update()).catch(()=>{});
 }
 </script>
 </body>
